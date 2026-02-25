@@ -27,6 +27,6 @@ jobs:
       - run: npm install --legacy-peer-deps
       - run: npm run test:core -- --coverage
 
-      - uses: coverallsapp/github-action@master
+      - uses: coverallsapp/github-action@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
