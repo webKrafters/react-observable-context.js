@@ -228,8 +228,10 @@ describe( 'useStore', () => {
 							'dsdfd.sfgrwfg'
 						];
 						resetData = {
-							a: { [ REPLACE_TAG ]: initialState.a },
-							dsdfd: { [ DELETE_TAG ]: [ 'adfsdff', 'sfgrwfg' ] }
+							a: {
+								[ REPLACE_TAG ]: initialState.a
+							},
+							[ DELETE_TAG ]: [ 'dsdfd' ]
 						};
 						store.resetState( ConnectionMock, nonInitStatePaths );
 					});
@@ -440,7 +442,7 @@ describe( 'useStore', () => {
 							}
 						}
 					);
-					expect(() => result.current.resetState( ConnectionMock, expect.anything() ))
+					expect(() => result.current.resetState( ConnectionMock ))
 						.toThrow( '`resetState` prehook must return a boolean value.' );
 				} );
 			} );

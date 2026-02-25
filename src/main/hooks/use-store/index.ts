@@ -32,6 +32,7 @@ import isEmpty from 'lodash.isempty';
 
 import mapPathsToObject from '@webkrafters/data-distillery';
 import stringToDotPath from '@webkrafters/path-dotize';
+import getProperty from '@webkrafters/get-property';
 import AutoImmutable from '@webkrafters/auto-immutable';
 
 import {
@@ -138,38 +139,30 @@ const useStore = <T extends State>(
 	const resetState = useCallback<StoreInternal<T>["resetState"]>(
 		( connection, propertyPaths = [] ) => {
 			const original = _storage.clone( _storage.getItem( storageKey.current ) );
-			let resetData;
-			if( !propertyPaths.length ) {
-				resetData = {};
-			} else if( propertyPaths.includes( FULL_STATE_SELECTOR ) ) {
+			let resetData = {};
+			if( propertyPaths.includes( FULL_STATE_SELECTOR ) ) {
 				resetData = isEmpty( original ) ? CLEAR_TAG : { [ REPLACE_TAG ]: original };
 			} else {
-				const visitedPathMap = {};
-				const transformer = ({ trail, value } : PropertyInfo ) => {
-					visitedPathMap[ trail.join( '.' ) ] = null;
-					return { [ REPLACE_TAG ]: value };
-				} 
-				resetData = mapPathsToObject( original, propertyPaths, transformer as Transform );
-				if( Object.keys( visitedPathMap ).length < propertyPaths.length ) {
-					for( let path of propertyPaths ) {
-						path = stringToDotPath( path );
-						if( path in visitedPathMap ) { continue }
-						let trail = path.split( '.' );
-						const keyTuple = trail.slice( -1 );
-						trail = trail.slice( 0, -1 );
-						let node = resetData;
-						for( const t of trail ) {
-							if( isEmpty( node[ t ] ) ) {
-								node[ t ] = {};
-							}
-							node = node[ t ];
-						}
-						if( DELETE_TAG in node ) {
-							node[ DELETE_TAG ].push( ...keyTuple );
-						} else {
-							node[ DELETE_TAG ] = keyTuple;
-						}
+				for( let path of propertyPaths ) {
+					let node = resetData;
+					const tokens = stringToDotPath( path ).split( '.' );
+					const { trail, ...pInfo } = getProperty( original, tokens );
+					for( let { length, ...keys } = trail, k = 0; k < length; k++ ) {
+						if( REPLACE_TAG in node ) { continue }
+						const key = keys[ k ];
+						if( !( key in node ) ) { node[ key ] = {} }
+						node = node[ key ];
 					}
+					if( REPLACE_TAG in node ) { continue }
+					if( pInfo.exists ) {
+						for( const k in node ) { delete node[ k ] }
+						node[ REPLACE_TAG ] = pInfo._value;
+						continue;
+					}
+					if( !( DELETE_TAG in node ) ) { node[ DELETE_TAG ] = [] }
+					const deletingKey = tokens[ trail.length ];
+					!node[ DELETE_TAG ].includes( deletingKey ) &&
+					node[ DELETE_TAG ].push( deletingKey );
 				}
 			}
 			runPrehook( prehooksRef.current, 'resetState', [
