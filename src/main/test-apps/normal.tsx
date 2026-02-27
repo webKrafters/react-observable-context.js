@@ -8,7 +8,7 @@ import React, {
 import isEmpty from 'lodash.isempty';
 
 import { createContext } from '..';
-import { SelectorMap } from '../..';
+import { Prehooks, SelectorMap } from '../..';
 
 export type TestState = {
 	color: string,
@@ -224,8 +224,10 @@ export const PriceSticker : React.FC = () => {
 };
 PriceSticker.displayName = 'PriceSticker';
 
-
-export const Product : React.FC<{type : string}> = ({ type }) => {
+export const Product : React.FC<{
+	prehooks?: Prehooks, type : string
+}> = ({ prehooks = undefined, type }) => {
+	useEffect(() => { ObservableContext.prehooks = prehooks! }, [ prehooks ]);
 	useEffect(() => {
 		ObservableContext.store.setState({ type });
 	}, [ type ]);

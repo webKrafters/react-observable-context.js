@@ -61,6 +61,7 @@ import AppNormal, {
 	ObservableContext,
 	Product,
 	TallyDisplay,
+	useStream,
 	TestState
 } from './test-apps/normal';
 import AppWithConnectedChildren from './test-apps/with-connected-children';
@@ -488,8 +489,8 @@ describe( 'ReactObservableContext', () => {
 		test( 'is successful', () => {
 			storeRef = undefined as unknown as typeof storeRef;
 			render( <TestComp /> );
-			expect( storeRef.current )
-				.toEqual( expect.objectContaining({
+			expect( storeRef.current ).toEqual(
+				expect.objectContaining({
 					getState: expect.any( Function ),
 					resetState: expect.any( Function ),
 					setState: expect.any( Function ),
@@ -578,7 +579,7 @@ describe( 'ReactObservableContext', () => {
 			});
 			render( <TestComp><Child /></TestComp> );
 			const onChangeMock = jest.fn();
-			const unsub = storeRef.current!.subscribe( onChangeMock );
+			const unsub = ObservableContext.store.subscribe( 'data-updated', onChangeMock );
 			const NEW_CNAME = 'What is my company name again?????';
 			fireEvent.click( screen.getByRole( 'button' ), {
 				target: { value: NEW_CNAME }
@@ -644,7 +645,7 @@ describe( 'ReactObservableContext', () => {
 					fireEvent.click( screen.getByRole( 'button', { name: 'reset context' } ) );
 					expect( prehooks.resetState ).toHaveBeenCalledTimes( 1 );
 					expect( prehooks.resetState ).toHaveBeenCalledWith({
-						[ REPLACE_TAG ]: {
+						[ AutoImmutableModule.REPLACE_TAG ]: {
 							// data slices from original state to reset current state slices
 							color: 'Burgundy',
 							customer: {
@@ -923,7 +924,6 @@ describe( 'ReactObservableContext', () => {
 							capturedProps = props;
 							return null
 						};
-						const fn = ObservableContext.connect( selectorMap );
 						const ConnectedComponent = ObservableContext.connect( selectorMap )( T );
 						render( <ConnectedComponent { ...ownProps } /> );
 						const data : Record<string,unknown> = {};
@@ -956,7 +956,7 @@ describe( 'ReactObservableContext', () => {
 							setState: expect.any( Function ),
 							subscribe: expect.any( Function )
 						})
-					} );
+					);
 					describe( 'accessing the state', () => {
 						test( 'returns entire copy of the current state by default', () => {
 							const currentState = ObservableContext.store.getState();
@@ -1050,62 +1050,12 @@ describe( 'ReactObservableContext', () => {
 					} );
 					test( 'updates internal state', async () => {
 						const { renderCount } : PerfValue = perf( React );
-						let ctx = React.createRef();
-						// @debug
-						// @todo
-						const TallyDisplay = export const TallyDisplay : React.FC = () => {
-							const { data: {
-								color, name, price, type
-							} } = useStream({
-								color: 'color',
-								name: 'customer.name',
-								price: 'price',
-								type: 'type'
-							});
-							useEffect(() => console.log( 'TallyDisplay component rendered.....' ));
-							return (
-								<div style={{ margin: '20px 0 10px' }}>
-									<div style={{ float: 'left', fontSize: '1.75rem' }}>
-										Customer:
-										{ ' ' }
-										{ isEmpty( name.first ) && isEmpty( name.last )
-											? 'n.a.'
-											: (
-												<>
-													<CapitalizedDisplay text={ name.first } />
-													{ ' ' }
-													<CapitalizedDisplay text={ name.last } />
-												</>
-											)
-										}
-									</div>
-									<div style={{ clear: 'both', paddingLeft: 3 }}>
-										<CustomerPhoneDisplay />
-									</div>
-									<table>
-										<tbody>
-											<tr><td><label>Type:</label></td><td>
-												<CapitalizedDisplay text={ type as unknown as string } />
-											</td></tr>
-											<tr><td><label>Color:</label></td><td>
-												<CapitalizedDisplay text={ color as unknown as string } />
-											</td></tr>
-											<tr><td><label>Price:</label></td><td>{ price.toFixed( 2 ) }</td></tr>
-										</tbody>
-									</table>
-									<div style={{ textAlign: 'right' }}>
-										<Reset />
-									</div>
-								</div>
-							);
-						};
-						//
 						render( <TallyDisplay /> );
 						await wait(() => {});
 						expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 1 );
 						const currentState = ObservableContext.store.getState();
 						ObservableContext.store.setState({ price: 45 });
-						let newState = { ...state, price: 45 };
+						let newState = { ...defaultState, price: 45 };
 						await wait(() => {});
 						await new Promise( resolve => setTimeout( resolve, 50 ) );
 						expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 2 );
@@ -1116,16 +1066,16 @@ describe( 'ReactObservableContext', () => {
 						await new Promise( resolve => setTimeout( resolve, 50 ) );
 						expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 3 );
 						let currentState2 = ObservableContext.store.getState();
-						expect( currentState2 ).toStrictEqual( state );
+						expect( currentState2 ).toStrictEqual( defaultState );
 						expect( currentState2 ).toStrictEqual( currentState );
 						// alter internal state to ready for default reset feature
 						ObservableContext.store.setState({ price: 300 });
 						currentState2 = ObservableContext.store.getState();
 						await wait(() => {});
 						await new Promise( resolve => setTimeout( resolve, 50 ) );
-						newState = { ...state, price: 300 };
+						newState = { ...defaultState, price: 300 };
 						expect( currentState2 ).toEqual( newState );
-						expect( currentState2 ).not.toEqual( state );
+						expect( currentState2 ).not.toEqual( defaultState );
 						expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 4 );
 						// default reset results in no-operation
 						ObservableContext.store.resetState();
@@ -1134,17 +1084,17 @@ describe( 'ReactObservableContext', () => {
 						await new Promise( resolve => setTimeout( resolve, 50 ) );
 						expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 4 );
 						expect( newState ).toEqual( currentState3 );
-						expect( state ).not.toEqual( currentState3 );
+						expect( defaultState ).not.toEqual( currentState3 );
 						expect( currentState2 ).toBe( currentState3 );
 						cleanupPerfTest();
 					}, 3e4 );
 					test( 'subscribes to state changes', async () => {
-						render( <TestProvider /> );
+						render( <TallyDisplay /> );
 						const changes = { price: 45 };
 						const onChangeMock = jest.fn();
-						const unsub = storeRef.current!.subscribe( onChangeMock );
+						const unsub = ObservableContext.store.subscribe( 'data-updated', onChangeMock );
 						expect( onChangeMock ).not.toHaveBeenCalled();
-						storeRef.current!.setState( changes );
+						ObservableContext.store.setState( changes );
 						expect( onChangeMock ).toHaveBeenCalled();
 						expect( onChangeMock.mock.calls[ 0 ][ 0 ] ).toEqual( changes );
 						expect( onChangeMock.mock.calls[ 0 ][ 1 ] ).toEqual([[ 'price' ]]);
@@ -1158,7 +1108,7 @@ describe( 'ReactObservableContext', () => {
 							},
 							{ customer: { name: { last: 'T_last_2' } } }
 						];
-						storeRef.current!.setState( changes2 );
+						ObservableContext.store.setState( changes2 );
 						expect( onChangeMock ).toHaveBeenCalled();
 						expect( onChangeMock.mock.calls[ 0 ][ 0 ] ).toEqual( changes2 );
 						expect( onChangeMock.mock.calls[ 0 ][ 1 ] ).toEqual([
@@ -1173,23 +1123,27 @@ describe( 'ReactObservableContext', () => {
 						});
 						expect( onChangeMock.mock.calls[ 0 ][ 3 ] ).toEqual( expect.any( Function ) );
 						onChangeMock.mockClear();
-						storeRef.current!.resetState([ FULL_STATE_SELECTOR ]);
+						ObservableContext.store.resetState([ FULL_STATE_SELECTOR ]);
 						expect( onChangeMock ).toHaveBeenCalled();
-						expect( onChangeMock.mock.calls[ 0 ][ 0 ] ).toEqual({[ REPLACE_TAG ]: state });
+						expect( onChangeMock.mock.calls[ 0 ][ 0 ] ).toEqual({
+							[ AutoImmutableModule.REPLACE_TAG ]: defaultState
+						});
 						expect( onChangeMock.mock.calls[ 0 ][ 1 ] ).toEqual([[]]);
-						expect( onChangeMock.mock.calls[ 0 ][ 2 ] ).toEqual( state );
+						expect( onChangeMock.mock.calls[ 0 ][ 2 ] ).toEqual( defaultState );
 						expect( onChangeMock.mock.calls[ 0 ][ 3 ] ).toEqual( expect.any( Function ) );
 						onChangeMock.mockClear();
 						unsub();
-						storeRef.current!.setState( changes );
+						ObservableContext.store.setState( changes );
 						expect( onChangeMock ).not.toHaveBeenCalled();
-						storeRef.current!.resetState([ FULL_STATE_SELECTOR ]);
+						ObservableContext.store.resetState([ FULL_STATE_SELECTOR ]);
 						expect( onChangeMock ).not.toHaveBeenCalled();
 					} );
 				} );
 			} );
 		} );
-		describe( 'useStream(...)', () => {
+		// @debug
+		describe( '1cccc', () => {
+		// describe( 'useStream(...)', () => {
 			type handler = ( ...args : Array<unknown> ) => void;
 			let Client : React.FC<{
 				selectorMap? : SelectorMap,
@@ -1205,8 +1159,8 @@ describe( 'ReactObservableContext', () => {
 			let selectorMapOnRender : Record<string, string>;
 			beforeAll(() => {
 				sourceData = createSourceData();
-				createObservable = value => ({
-					ObservableContext: createContext( sourceData ),
+				createObservable = ( value  = sourceData ) => ({
+					ObservableContext: createContext( value ),
 					Wrapper: props => ( <>{ props.children }</> )
 				});
 				selectorMapOnRender = {
@@ -1215,8 +1169,8 @@ describe( 'ReactObservableContext', () => {
 					tag6: 'tags[5]'
 				};
 				const observable = createObservable( sourceData );
-				const useStream = ObservableContext.useStream;
 				ObservableContext = observable.ObservableContext;
+				const useStream = ObservableContext.useStream;
 				Wrapper = observable.Wrapper;
 				/* eslint-disable react/display-name */
 				Client = ({ selectorMap, onChange = ( ...args ) => {} }) => {
@@ -1300,21 +1254,23 @@ describe( 'ReactObservableContext', () => {
 							.toEqual( Object.keys( selectorMapOnRerender ));
 					});
 					test( 'destroys previous and obtains new connection', () => {
-						const cache = new AutoImmutable( createSourceData() );
+						const sourceData = createSourceData();
+						const cache = new AutoImmutable( sourceData );
 						const connection = cache.connect();
 						const disconnectSpy = jest.spyOn( connection, 'disconnect' );
-						const getSpy = jest
-							.spyOn( connection, 'get' )
-							.mockReturnValue( mockGetReturnValue );
 						const connectSpy = jest
-							.spyOn( cache, 'connect' )
-							.mockReturnValue( connection )
-						const cacheSpy = jest
-							.spyOn( AutoImmutableModule, 'default' )
-							.mockReturnValue( cache );
+							.spyOn( AutoImmutable.prototype, 'connect' )
+							.mockReturnValue( connection );
 						const mockUnsubscribe = jest.fn();
-						const mockSubscribe = jest.fn()
-							.mockReturnValue( mockUnsubscribe );
+						const testCtx = new EagleEyeContext( sourceData );
+						const testChannel = testCtx.store( selectorMapOnRender );
+						const subsribeSpy = jest
+							.spyOn( testChannel, 'testC
+						const storeSpy = jest
+							.spyOn( EagleEyeContext.prototype, 'store', 'get' )
+							.mockReturnValue({
+
+							});
 						
 						const { rerender } = render(
 							<Wrapper>
@@ -1322,7 +1278,7 @@ describe( 'ReactObservableContext', () => {
 							</Wrapper>
 						);
 						expect( connectSpy ).toHaveBeenCalledTimes( 3 );
-						expect( mockSubscribe ).toHaveBeenCalledTimes( 1 );
+						expect( subscribeSpy ).toHaveBeenCalledTimes( 1 );
 						expect( disconnectSpy ).not.toHaveBeenCalled();
 						expect( mockUnsubscribe ).not.toHaveBeenCalled();
 						rerender(
@@ -1331,14 +1287,13 @@ describe( 'ReactObservableContext', () => {
 							</Wrapper>
 						);
 						expect( connectSpy ).toHaveBeenCalledTimes( 4 );
-						expect( mockSubscribe ).toHaveBeenCalledTimes( 2 );
+						expect( subscribeSpy ).toHaveBeenCalledTimes( 2 );
 						expect( disconnectSpy ).toHaveBeenCalledTimes( 1 );
 						expect( mockUnsubscribe ).toHaveBeenCalledTimes( 1 );
 
 						disconnectSpy.mockRestore();
-						getSpy.mockRestore();
 						connectSpy.mockRestore();
-						cacheSpy.mockRestore();
+						subscribeSpy.mockRestore();
 					});
 					describe( 'when the new selectorMap is not empty', () => {
 						test( 'refreshes state data', () => {
