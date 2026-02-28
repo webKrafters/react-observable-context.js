@@ -128,7 +128,7 @@ export class ObservableContext<T extends State> {
 					'data-changed',
 					() => setStore({
 						...store, data: channel.data
-					} as unknown as Store<T, S>)
+					} as unknown as Store<T, S> )
 				);
 				return () => channel.endStream();
 			}, []);

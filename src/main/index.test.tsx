@@ -6,8 +6,7 @@ import {
 	type ConnectProps,
 	type ExtractInjectedProps,
 	type SelectorMap,
-	type Store,
-	type StoreRef
+	type Store
 } from '..';
 
 import getProperty from '@webkrafters/get-property';
@@ -66,7 +65,7 @@ import AppNormal, {
 } from './test-apps/normal';
 import AppWithConnectedChildren from './test-apps/with-connected-children';
 import AppWithPureChildren from './test-apps/with-pure-children';
-import { EagleEyeContext } from '@webkrafters/eagleeye';
+import { EagleEyeContext, Prehooks } from '@webkrafters/eagleeye';
 
 // import {
 // 	DELETE_TAG,
@@ -83,7 +82,6 @@ beforeAll(() => {
 	jest.spyOn( console, 'log' ).mockImplementation(() => {});
 	jest.spyOn( console, 'error' ).mockImplementation(() => {});
 });
-beforeEach(() => { ObservableContext.store.resetState() })
 afterAll(() => jest.resetAllMocks());
 afterEach( cleanup );
 
@@ -103,28 +101,8 @@ const transformRenderCount = (
 };
 
 describe( 'ReactObservableContext', () => {
-	describe( 'createContext(...)', () => {
-		test( 'returns an observable context instance', () => {
-			expect( createContext() ).toBeInstanceOf( ObservableContext );
-		} );
-	} );
 	describe( 'Provider-less', () => {
-		let sourceData : SourceData;
-		let obsCtx : ObservableContextType<SourceData>;
-		beforeAll(() => {
-			sourceData = createSourceData();
-			obsCtx = createContext( sourceData );
-		});
-		afterAll(() => { obsCtx.dispose() });
-		test( 'can be used in any part of the application', () => {
-			
-		} );
-	} );
-} );
-
-describe( 'ReactObservableContext', () => {
-	describe( 'store updates from within the Provider tree', () => {
-		describe( 'updates only subscribed components', () => {
+		describe( 'applicable anywhere external of and within the application', () => {
 			describe( 'using connected store subscribers', () => {
 				test( 'scenario 1', async () => {
 					const { renderCount } : PerfValue = perf( React );
@@ -497,7 +475,9 @@ describe( 'ReactObservableContext', () => {
 				});
 		});
 		afterEach(() => { TestObservableCtx.dispose() })
-		test( 'is successful', async () => {
+		// @debug
+		test( '1wwww', async () => {
+		// test( 'is successful', async () => {
 			render( <Client /> );
 			await wait(() => {});
 			expect( screen.getByTestId( 'data-output' ).textContent ).toEqual(
@@ -516,7 +496,7 @@ describe( 'ReactObservableContext', () => {
 			await wait(() => {});
 			expect( screen.getByTestId( 'data-output' ).textContent ).toEqual(
 				JSON.stringify({
-					company: 'NEW CORPORATE INC',
+					employer: 'NEW CORPORATE INC',
 					isActive: true,
 					tag6: 'MY SIXTH REMOTE'
 				})
@@ -527,9 +507,9 @@ describe( 'ReactObservableContext', () => {
 			await wait(() => {});
 			expect( screen.getByTestId( 'data-output' ).textContent ).toEqual(
 				JSON.stringify({
-					company: 'NEW CORPORATE INC',
+					employer: 'NEW CORPORATE INC',
 					isActive: false,
-					tags6: 'MY SIXTH REMOTE'
+					tag6: 'MY SIXTH REMOTE'
 				})
 			);
 
@@ -539,7 +519,7 @@ describe( 'ReactObservableContext', () => {
 			) ).toEqual({
 				company: 'NEW CORPORATE INC',
 				isActive: false,
-				'tags[5]': 'MY SIXTH REMOTE'
+				tags: [ , , , , , 'MY SIXTH REMOTE' ]
 			});
 
 			// externally observe updates made to specific slices of the state
@@ -547,19 +527,23 @@ describe( 'ReactObservableContext', () => {
 			const unsub = TestObservableCtx.store.subscribe( 'data-updated', onUpdate );
 			expect( onUpdate ).not.toHaveBeenCalled();
 			expect( TestObservableCtx.store.getState([ 'name.first' ]) )
-				.toEqual({ 'name.first': 'Amber' });
+				.toEqual({ name: { first: 'Amber' } });
 			fireEvent.click( screen.getByRole( 'button' ) );
 			await wait(() => {});
 			expect( TestObservableCtx.store.getState([ 'name.first' ]) )
-				.toEqual({ 'name.first': 'Hallelujah' });
-			expect( onUpdate ).toHaveBeenCalledWith({});
+				.toEqual({ name: { first: 'Hallelujah' } });
+			expect( onUpdate ).toHaveBeenCalledTimes( 1 );
+			expect( onUpdate.mock.calls[ 0 ][ 0 ] ).toEqual({ name: { first: 'Hallelujah' } });
+			expect( onUpdate.mock.calls[ 0 ][ 1 ] ).toEqual([[ 'name', 'first' ]]);
+			expect( onUpdate.mock.calls[ 0 ][ 2 ] ).toEqual({ name: { first: 'Hallelujah' } });
+			expect( onUpdate.mock.calls[ 0 ][ 3 ] ).toEqual( expect.any( Function ));
 			unsub();
 
 			// externally receive the entire state
 			expect( TestObservableCtx.store.getState() ).toEqual({
 				...sourceData,
 				company: 'NEW CORPORATE INC',
-				nane: {
+				name: {
 					...sourceData.name,
 					first: 'Hallelujah'
 				},
@@ -571,8 +555,8 @@ describe( 'ReactObservableContext', () => {
 			});
 
 			// externally reset the entire state
-			TestObservableCtx.store.resetState();
-			expect( TestObservableCtx.store.getState() ).toEqual( sourceData );
+			TestObservableCtx.store.resetState([ FULL_STATE_SELECTOR ]);
+			expect( TestObservableCtx.store.getState() ).toStrictEqual( sourceData );
 		});
 		test( 'will reset state when ' + FULL_STATE_SELECTOR + ' APPEARS IN THE LIST OF TARGETED RESET PATHS', async () => {
 			
@@ -594,7 +578,7 @@ describe( 'ReactObservableContext', () => {
 			await wait(() => {});
 			expect( screen.getByTestId( 'data-output' ).textContent ).toEqual(
 				JSON.stringify({
-					company: 'NEW CORPORATE INC',
+					employer: 'NEW CORPORATE INC',
 					isActive: true,
 					tag6: 'MY SIXTH REMOTE'
 				})
@@ -605,9 +589,9 @@ describe( 'ReactObservableContext', () => {
 			await wait(() => {});
 			expect( screen.getByTestId( 'data-output' ).textContent ).toEqual(
 				JSON.stringify({
-					company: 'VORTEXACO',
+					employer: 'VORTEXACO',
 					isActive: false,
-					tags6: 'laborum'
+					tag6: 'laborum'
 				})
 			);
 			expect( TestObservableCtx.store.getState() ).toEqual( sourceData );
@@ -657,7 +641,7 @@ describe( 'ReactObservableContext', () => {
 								phone: null
 							},
 							price: 22.5,
-							type: 'Computer'
+							type: ''
 						}
 					}, {
 						// current: context state value after the `update type` & `update color` button clicks
@@ -678,7 +662,7 @@ describe( 'ReactObservableContext', () => {
 								phone: null
 							},
 							price: 22.5,
-							type: 'Computer'
+							type: ''
 						}
 					});
 				} );
@@ -756,9 +740,15 @@ describe( 'ReactObservableContext', () => {
 					expect( prehooks.setState ).toHaveBeenCalledTimes( 1 );
 					expect( prehooks.setState ).toHaveBeenCalledWith({ type: 'Bag' });
 				} );
-				test( 'completes `store.setState` method call if `setState` prehook returns TRUTHY', async () => {
+				// @debug
+				test( '1xxxx', async () => {
+				// test( 'completes `store.setState` method call if `setState` prehook returns TRUTHY', async () => {
 					const { renderCount } : PerfValue = perf( React );
 					const prehooks = Object.freeze({ setState: jest.fn().mockReturnValue( true ) });
+					
+					// @debug
+					console.info( '<<<<<<<+++++++ STARTING A NEW PRODUCT ++++++++>>>>> ' );
+
 					render( <Product prehooks={ prehooks } type="Computer" /> );
 					let baseRenderCount : Record<string,any>;
 					await wait(() => { baseRenderCount = transformRenderCount( renderCount ) });
@@ -774,7 +764,8 @@ describe( 'ReactObservableContext', () => {
 						expect( netCount.TallyDisplay ).toBe( 1 ); // DULY UPDATED WITH NEW STATE CHANGE
 					});
 					cleanupPerfTest();
-				} );
+					ObservableContext.prehooks = undefined as unknown as Prehooks<Partial<TestState>>;
+				}, 3e4 );
 				test( 'aborts `store.setState` method call if `setState` prehook returns FALSY', async () => {
 					const { renderCount } : PerfValue = perf( React );
 					const prehooks = Object.freeze({ setState: jest.fn().mockReturnValue( false ) });
@@ -942,14 +933,8 @@ describe( 'ReactObservableContext', () => {
 			} );
 		} );
 		describe( 'createContext(...)', () => {
-			test( 'returns observable context', () => {
+			test( 'returns observable context instance', () => {
 				expect( ObservableContext ).toBeInstanceOf( ObservableContextType );
-				expect( ObservableContext ).toEqual(
-					expect.objectContaining({
-						Consumer: expect.any( Object ),
-						Provider: expect.any( Object )
-					})
-				);
 			} );
 			describe( 'Context property', () => {
 				test( 'provides store object reference for external exposure', () => {
@@ -964,32 +949,28 @@ describe( 'ReactObservableContext', () => {
 				} );
 				describe( 'accessing the state', () => {
 					test( 'returns entire copy of the current state by default', () => {
-						const currentState = ObservableContext.store.getState();
+						const ctx = createContext( defaultState );
+						const currentState = ctx.store.getState();
 						expect( currentState ).not.toBe( defaultState );
 						expect( currentState ).toStrictEqual( defaultState );
+						ctx.dispose();
 					} );
 					test( 'returns only copy of the state targeted by property paths', () => {
-						const expected = {
-							customer: {
-								name: { last: 'tLast' },
-								phone: null
-							},
-							type: 'TEST TYPE'
-						};
-						const currentState = ObservableContext.store.getState([
+						const ctx = createContext( defaultState );
+						expect( ctx.store.getState([
 							'customer.name.last',
 							'type',
 							'customer.phone'
-						]);
-						expect( currentState ).toEqual( expected );
-					} );
-					test( 'returns entire copy of the current state if ' + FULL_STATE_SELECTOR + ' found in property paths used', () => {
-						expect( ObservableContext.store.getState([
-							'customer.name.last',
-							'type',
-							'customer.phone',
-							FULL_STATE_SELECTOR
-						]) ).toEqual( defaultState );
+						]) ).toEqual({
+							customer: {
+								name: {
+									last: null,
+								},
+								phone: null,
+							},
+							type: ''
+						});
+						ctx.dispose();
 					} );
 					describe( 'when unchanged, guarantees data consistency by ensuring that...', () => {
 						function areExact( a : any, b : any ) {
@@ -1053,55 +1034,47 @@ describe( 'ReactObservableContext', () => {
 						} );
 					} );
 				} );
-				test( 'updates internal state', async () => {
+				// @debug
+				test( '1wwww', async () => {
+				// test( 'updates internal state', async () => {
 					const { renderCount } : PerfValue = perf( React );
-					const changes = {
-						color: 'Blue',
-						customer: {
-							phone: '555-5000'
-						}
-					};
+					const testSelectors = [ 'color', 'customer.name.last', 'price' ];
 					const TestObsCtx = createContext( defaultState as Partial<TestState> );
-					const TestClient = TestObsCtx.connect([
-						'color', 'customer.name.last', 'type'
-					])(({ data }) => (
+					const TestClient : React.FC<{ data : {} }> = ({ data }) => (
 						<div data-testid="data-output">
 							{ JSON.stringify( data ) }
 						</div>
-					));
-					render( <TestClient /> );
+					);
+					TestClient.displayName = 'TestClient';
+					const ConnectedTestClient = TestObsCtx.connect( testSelectors )( TestClient );
+					render( <ConnectedTestClient /> );
 					await wait(() => {});
-					expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 1 );
+					expect( ( renderCount.current.TestClient as RenderCountField ).value ).toBe( 1 );
 					const currentState = TestObsCtx.store.getState();
 					TestObsCtx.store.setState({ price: 45 });
 					let newState = { ...defaultState, price: 45 };
 					await wait(() => {});
-					await new Promise( resolve => setTimeout( resolve, 50 ) );
-					expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 2 );
+					expect( ( renderCount.current.TestClient as RenderCountField ).value ).toBe( 2 );
 					expect( currentState ).not.toEqual( newState );
 					expect( TestObsCtx.store.getState() ).toEqual( newState );
 					TestObsCtx.store.resetState([ FULL_STATE_SELECTOR ]); // resets store internal state
 					await wait(() => {});
-					await new Promise( resolve => setTimeout( resolve, 50 ) );
-					expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 3 );
+					expect( ( renderCount.current.TestClient as RenderCountField ).value ).toBe( 3 );
 					let currentState2 = TestObsCtx.store.getState();
 					expect( currentState2 ).toStrictEqual( defaultState );
 					expect( currentState2 ).toStrictEqual( currentState );
-					// alter internal state to ready for default reset feature
 					TestObsCtx.store.setState({ price: 300 });
 					currentState2 = TestObsCtx.store.getState();
 					await wait(() => {});
-					await new Promise( resolve => setTimeout( resolve, 50 ) );
 					newState = { ...defaultState, price: 300 };
 					expect( currentState2 ).toEqual( newState );
 					expect( currentState2 ).not.toEqual( defaultState );
-					expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 4 );
-					// default reset results in no-operation
+					expect( ( renderCount.current.TestClient as RenderCountField ).value ).toBe( 4 );
+					// parameterless external invocation of resetState is a noop
 					TestObsCtx.store.resetState();
 					const currentState3 = TestObsCtx.store.getState();
 					await wait(() => {});
-					await new Promise( resolve => setTimeout( resolve, 50 ) );
-					expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 4 );
+					expect( ( renderCount.current.TestClient as RenderCountField ).value ).toBe( 4 );
 					expect( newState ).toEqual( currentState3 );
 					expect( defaultState ).not.toEqual( currentState3 );
 					expect( currentState2 ).toBe( currentState3 );

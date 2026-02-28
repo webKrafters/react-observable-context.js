@@ -229,6 +229,10 @@ export const Product : React.FC<{
 }> = ({ prehooks = undefined, type }) => {
 	useEffect(() => { ObservableContext.prehooks = prehooks! }, [ prehooks ]);
 	useEffect(() => {
+
+		// @debug
+		console.info( 'OBSERVABLE CONTEXT >>>> ', ObservableContext );
+		
 		ObservableContext.store.setState({ type });
 	}, [ type ]);
 	const overridePricing = useCallback(
