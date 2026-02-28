@@ -4,7 +4,7 @@ import type {
 	ReactNode
 } from 'react';
 
-import type { Prehooks, Store } from '../..';
+import type { Prehooks } from '../..';
 
 import { TestState } from './normal';
 

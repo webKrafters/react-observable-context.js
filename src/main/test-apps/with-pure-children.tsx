@@ -6,7 +6,6 @@ import React, {
 	memo,
 	useCallback,
 	useEffect,
-	useRef,
 	useState
 } from 'react';
 
@@ -14,121 +13,22 @@ import isEmpty from 'lodash.isempty';
 
 import {
 	CapitalizedDisplay,
+	CustomerPhoneDisplay,
 	defaultState,
-	TestState
+	Editor,
+	ObservableContext,
+	PriceSticker,
+	ProductDescription,
+	Reset,
+	TestState,
+	useStream
 } from './normal';
 
-import { createContext } from '..';
-
-const ObservableContext = createContext<Partial<TestState>>( defaultState );
-const useStream = ObservableContext.useStream;
-
-export const MemoizedReset = memo(() => {
-	useEffect(() => console.log( 'Reset component rendered.....' ));
-	const reset = useCallback(() => ObservableContext.store.resetState([ '@@STATE' ]), []);
-	return ( <button onClick={ reset }>reset context</button> );
-});
-export const MemoizedCustomerPhoneDisplay = memo(() => {
-	const { data } = useStream({ phone: 'customer.phone' });
-	useEffect(() => console.log( 'CustomerPhoneDisplay component rendered.....' ));
-	return ( <>{ `Phone: ${ data.phone ?? 'n.a.' }` }</> );
-});
-export const MemoizedEditor = memo(() => {
-	const fNameInputRef = useRef<HTMLInputElement>( null );
-	const lNameInputRef = useRef<HTMLInputElement>( null );
-	const phoneInputRef = useRef<HTMLInputElement>( null );
-	const priceInputRef = useRef<HTMLInputElement>( null );
-	const colorInputRef = useRef<HTMLInputElement>( null );
-	const typeInputRef = useRef<HTMLInputElement>( null );
-	const updateColor = useCallback(() => {
-		ObservableContext.store.setState({
-			color: colorInputRef.current!.value
-		});
-	}, []);
-	const updateName = useCallback(() => {
-		ObservableContext.store.setState({
-			customer: {
-				name: {
-					first: fNameInputRef.current!.value,
-					last: lNameInputRef.current!.value
-				}
-			}
-		});
-	}, []);
-	const updatePhone = useCallback(() => {
-		const phone = phoneInputRef.current!.value;
-		if( phone.length && !/[0-9]{10}/.test( phone ) ) { return }
-		ObservableContext.store.setState({ customer: { phone } });
-	}, []);
-	const updatePrice = useCallback(() => {
-		ObservableContext.store.setState({
-			price: Number( priceInputRef.current!.value )
-		} );
-	}, []);
-	const updateType = useCallback(() => {
-		ObservableContext.store.setState({
-			type: typeInputRef.current!.value
-		});
-	}, []);
-	useEffect(() => console.log( 'Editor component rendered.....' ));
-	return (
-		<fieldset style={{ margin: '10px 0' }}>
-			<legend>Editor</legend>
-			<h3 style={{ margin: '0.5rem 0' }}>Customer:</h3>
-			<div style={{ float: 'left', margin: '10px 0' }}>
-				<label htmlFor='firstName'><input ref={ fNameInputRef } placeholder="First name" /></label>
-				{ ' ' }
-				<label htmlFor='lastName'><input ref={ lNameInputRef } placeholder="Last name" /></label>
-				{ ' ' }
-				<button onClick={ updateName }>update customer</button>
-			</div>
-			<div style={{ clear: 'both', margin: '10px 0' }}>
-				<label>New Phone: <input
-					maxLength={ 10 }
-					placeholder="Empty or 10-digit integer"
-					ref={ phoneInputRef }
-					type="number"
-				/></label>
-				{ ' ' }
-				<button onClick={ updatePhone }>update phone</button>
-			</div>
-			<hr style={{ margin: '1.5rem 0' }} />
-			<div style={{ margin: '10px 0' }}>
-				<label>New Price: <input ref={ priceInputRef } /></label>
-				{ ' ' }
-				<button onClick={ updatePrice }>update price</button>
-			</div>
-			<div style={{ margin: '10px 0' }}>
-				<label>New Color: <input ref={ colorInputRef } /></label>
-				{ ' ' }
-				<button onClick={ updateColor }>update color</button>
-			</div>
-			<div style={{ margin: '10px 0' }}>
-				<label>New Type: <input ref={ typeInputRef } /></label>
-				{ ' ' }
-				<button onClick={ updateType }>update type</button>
-			</div>
-		</fieldset>
-	);
-});
-export const MemoizedProductDescription = memo(() => {
-	const { data } = useStream({ c: 'color', t: 'type' });
-	useEffect(() => console.log( 'ProductDescription component rendered.....' ));
-	return (
-		<div style={{ fontSize: 24 }}>
-			<strong>Description:</strong> { data.c } { data.t }
-		</div>
-	);
-});
-export const MemoizedPriceSticker = memo(() => {
-	const { data: { p } } = useStream({ p: 'price' });
-	useEffect(() => console.log( 'PriceSticker component rendered.....' ));
-	return (
-		<div style={{ fontSize: 36, fontWeight: 800 }}>
-			${ p.toFixed( 2 ) }
-		</div>
-	);
-});
+export const MemoizedReset = memo( Reset );
+export const MemoizedCustomerPhoneDisplay = memo( CustomerPhoneDisplay );
+export const MemoizedEditor = memo( Editor );
+export const MemoizedProductDescription = memo( ProductDescription );
+export const MemoizedPriceSticker = memo( PriceSticker );
 
 const TallyDisplay : FC = () => {
 	const { data: { color, name, price, type } } = useStream({

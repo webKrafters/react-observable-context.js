@@ -83,6 +83,7 @@ beforeAll(() => {
 	jest.spyOn( console, 'log' ).mockImplementation(() => {});
 	jest.spyOn( console, 'error' ).mockImplementation(() => {});
 });
+beforeEach(() => { ObservableContext.store.resetState() })
 afterAll(() => jest.resetAllMocks());
 afterEach( cleanup );
 
@@ -448,7 +449,7 @@ describe( 'ReactObservableContext', () => {
 				});
 				cleanupPerfTest();
 			} );
-			test( 'oonly re-renders parts of the Provider tree directly affected by the Provider parent state update', async () => {
+			test( 'only re-renders parts of the Provider tree directly affected by the Provider parent state update', async () => {
 				const { renderCount } : PerfValue = perf( React );
 				render( <AppNormal /> );
 				let baseRenderCount : Record<string,any>;
@@ -467,147 +468,150 @@ describe( 'ReactObservableContext', () => {
 			} );
 		} );
 	} );
-	describe( 'accessing store externally through its provider', () => {
-		const sourceData = createSourceData();
-		let storeRef : React.RefObject<StoreRef<Partial<SourceData>>>;
-		let ObservableContext : ObservableContextType<Partial<SourceData>>;
-		let TestComp : React.FC<{children?:React.ReactNode}>;
-		beforeAll(() => {
-			ObservableContext = createContext();
-			TestComp = ({ children }) => {
-				const ref = useRef<StoreRef<Partial<SourceData>>>( null );
-				useEffect(() => { storeRef = ref }, []);
-				return (
-					<ObservableContext.Provider
-						children={ children }
-						ref={ ref }
-						value={ sourceData }
-					/>
-				)
-			}
+	describe( 'manipulating components externally through context store reference', () => {
+		let TestObservableCtx : ObservableContextType<Partial<SourceData>>;
+		let sourceData : Partial<SourceData>
+		let Client : React.FC;
+		beforeAll(() => { sourceData = createSourceData() });
+		beforeEach(() => {
+			TestObservableCtx = createContext( sourceData );
+			Client = TestObservableCtx
+				.connect({
+					employer: 'company',
+					isActive: 'isActive',
+					tag6: 'tags[5]'
+				})(({ data, setState }) => {
+					const changeFirstName = useCallback(() => setState({
+						name: {
+							first: 'Hallelujah'
+						}
+					}), []);
+					return (
+						<>
+							<div data-testid="data-output">
+								{ JSON.stringify( data ) }
+							</div>
+							<button onClick={ changeFirstName } />
+						</>
+					);
+				});
 		});
-		test( 'is successful', () => {
-			storeRef = undefined as unknown as typeof storeRef;
-			render( <TestComp /> );
-			expect( storeRef.current ).toEqual(
-				expect.objectContaining({
-					getState: expect.any( Function ),
-					resetState: expect.any( Function ),
-					setState: expect.any( Function ),
-					subscribe: expect.any( Function )
+		afterEach(() => { TestObservableCtx.dispose() })
+		test( 'is successful', async () => {
+			render( <Client /> );
+			await wait(() => {});
+			expect( screen.getByTestId( 'data-output' ).textContent ).toEqual(
+				JSON.stringify({
+					employer: 'VORTEXACO',
+					isActive: false,
+					tag6: 'laborum'
 				})
-			);	
-		});
-		test( 'can read the current store data', async () => {
-			storeRef = undefined as unknown as typeof storeRef;
-			const NEW_AGE = 71;
-			const Child =  ObservableContext.connect()(({ setState }) => {
-				const setAge = React.useCallback(
-					() => setState({ age: NEW_AGE }),
-					[ setState ]
-				);
-				return ( <button value="set age" onClick={ setAge } /> );
+			);
+			// externally update UI states
+			TestObservableCtx.store.setState({
+				company: 'NEW CORPORATE INC',
+				isActive: true,
+				tags: { 5: 'MY SIXTH REMOTE' }
+			} as unknown as Partial<SourceData> );
+			await wait(() => {});
+			expect( screen.getByTestId( 'data-output' ).textContent ).toEqual(
+				JSON.stringify({
+					company: 'NEW CORPORATE INC',
+					isActive: true,
+					tag6: 'MY SIXTH REMOTE'
+				})
+			);
+
+			// externally reset any specific UI slice of the state
+			TestObservableCtx.store.resetState([ 'isActive' ]);
+			await wait(() => {});
+			expect( screen.getByTestId( 'data-output' ).textContent ).toEqual(
+				JSON.stringify({
+					company: 'NEW CORPORATE INC',
+					isActive: false,
+					tags6: 'MY SIXTH REMOTE'
+				})
+			);
+
+			// externally read specific slices of the state
+			expect( TestObservableCtx.store.getState(
+				[ 'company', 'isActive', 'tags[5]' ]
+			) ).toEqual({
+				company: 'NEW CORPORATE INC',
+				isActive: false,
+				'tags[5]': 'MY SIXTH REMOTE'
 			});
-			render( <TestComp><Child /></TestComp> );
-			expect( storeRef.current!.getState().age ).toBe( sourceData.age );
+
+			// externally observe updates made to specific slices of the state
+			const onUpdate = jest.fn();
+			const unsub = TestObservableCtx.store.subscribe( 'data-updated', onUpdate );
+			expect( onUpdate ).not.toHaveBeenCalled();
+			expect( TestObservableCtx.store.getState([ 'name.first' ]) )
+				.toEqual({ 'name.first': 'Amber' });
 			fireEvent.click( screen.getByRole( 'button' ) );
-			expect( storeRef.current!.getState().age ).toBe( NEW_AGE );
-			cleanupPerfTest();
+			await wait(() => {});
+			expect( TestObservableCtx.store.getState([ 'name.first' ]) )
+				.toEqual({ 'name.first': 'Hallelujah' });
+			expect( onUpdate ).toHaveBeenCalledWith({});
+			unsub();
+
+			// externally receive the entire state
+			expect( TestObservableCtx.store.getState() ).toEqual({
+				...sourceData,
+				company: 'NEW CORPORATE INC',
+				nane: {
+					...sourceData.name,
+					first: 'Hallelujah'
+				},
+				tags: (() => {
+					const tags = [ ...sourceData.tags! ];
+					tags[ 5 ] = 'MY SIXTH REMOTE';
+					return tags;
+				})() 
+			});
+
+			// externally reset the entire state
+			TestObservableCtx.store.resetState();
+			expect( TestObservableCtx.store.getState() ).toEqual( sourceData );
 		});
-		test( 'can update store and propagate observing components', async () => {
-			storeRef = undefined as unknown as typeof storeRef;
-			const Child =  ObservableContext.connect({
-				fName: 'name.first'
-			})(({ data: { fName } }) => (
-				<>They call me: <span data-testid="fname">{ fName }</span></>
-			));
-			render( <TestComp><Child /></TestComp> );
-			expect( screen.getByTestId( 'fname' ).textContent )
-				.toEqual( sourceData.name.first );
-			const NEW_FNAME = 'Imagene';
-			storeRef.current!.setState({
-				name: {
-					first: NEW_FNAME
-				}
-			});
-			await wait(() => {
-				expect( screen.getByTestId( 'fname' ).textContent )
-					.toEqual( NEW_FNAME );
-			});
-			cleanupPerfTest();
-		});
-		test( 'can reset store and propagate observing components', async () => {
-			storeRef = undefined as unknown as typeof storeRef;
-			const NEW_EMAIL = 'some.gobbledygook.co.uk';
-			const Child = ObservableContext.connect({
-				myEmail: 'email'
-			} )(({ data: { myEmail }, setState }) => {
-				const setEmail = React.useCallback(
-					() => setState({ email: NEW_EMAIL }),
-					[ setState ]
-				);
-				return (
-					<>
-						<>Here is my email: <span data-testid="myemail">{ myEmail }</span></>
-						<button value="set email" onClick={ setEmail } />
-					</>
-				);
-			});
-			render( <TestComp><Child /></TestComp> );
-			expect( screen.getByTestId( 'myemail' ).textContent )
-				.toEqual( sourceData.email );
-			fireEvent.click( screen.getByRole( 'button' ) );
-			await await(() => {
-				expect( screen.getByTestId( 'myemail' ).textContent )
-					.toEqual( NEW_EMAIL );
-			});
-			storeRef.current!.resetState([ 'email' ]);
-			await wait(() => {
-				expect( screen.getByTestId( 'myemail' ).textContent )
-					.toEqual( sourceData.email );
-			});
-			cleanupPerfTest();
-		});
-		test( 'can observe state changes coming into the store', async () => {
-			storeRef = undefined as unknown as typeof storeRef;
-			const Child = ObservableContext.connect()(({ setState }) => {
-				const setCompany : React.MouseEventHandler<HTMLButtonElement> = React.useCallback(
-					e => setState({ company: ( e.target as HTMLButtonElement ).value }),
-					[ setState ]
-				);
-				return ( <button value="set company" onClick={ setCompany } /> );
-			});
-			render( <TestComp><Child /></TestComp> );
-			const onChangeMock = jest.fn();
-			const unsub = ObservableContext.store.subscribe( 'data-updated', onChangeMock );
-			const NEW_CNAME = 'What is my company name again?????';
-			fireEvent.click( screen.getByRole( 'button' ), {
-				target: { value: NEW_CNAME }
-			});
-			expect( onChangeMock ).toHaveBeenCalledTimes( 1 );
-			expect( onChangeMock.mock.calls[ 0 ][ 0 ] ).toEqual({ company: NEW_CNAME });
-			expect( onChangeMock.mock.calls[ 0 ][ 1 ] ).toEqual([[ 'company' ]]);
-			expect( onChangeMock.mock.calls[ 0 ][ 2 ] ).toEqual({ company: NEW_CNAME });
-			expect( onChangeMock.mock.calls[ 0 ][ 3 ] ).toEqual( expect.any( Function ) );
-			onChangeMock.mockClear();
-			const NEW_CNAME2 = 'Alright! let me tell you what\'s what!!!!!';
-			fireEvent.click( screen.getByRole( 'button' ), {
-				target: { value: NEW_CNAME2 }
-			});
-			expect( onChangeMock ).toHaveBeenCalledTimes( 1 );
-			expect( onChangeMock.mock.calls[ 0 ][ 0 ] ).toEqual({ company: NEW_CNAME2 });
-			expect( onChangeMock.mock.calls[ 0 ][ 1 ] ).toEqual([[ 'company' ]]);
-			expect( onChangeMock.mock.calls[ 0 ][ 2 ] ).toEqual({ company: NEW_CNAME2 });
-			expect( onChangeMock.mock.calls[ 0 ][ 3 ] ).toEqual( expect.any( Function ) );
-			unsub(); // unsubscribe store change listener
-			onChangeMock.mockClear();
-			const NEW_CNAME3 = 'Geez! Did you get the name I just gave ya?????';
-			fireEvent.click( screen.getByRole( 'button' ), {
-				target: { value: NEW_CNAME3 }
-			});
-			expect( onChangeMock ).not.toHaveBeenCalled();
-			cleanupPerfTest();
-		});
+		test( 'will reset state when ' + FULL_STATE_SELECTOR + ' APPEARS IN THE LIST OF TARGETED RESET PATHS', async () => {
+			
+			render( <Client /> );
+			await wait(() => {});
+			expect( screen.getByTestId( 'data-output' ).textContent ).toEqual(
+				JSON.stringify({
+					employer: 'VORTEXACO',
+					isActive: false,
+					tag6: 'laborum'
+				})
+			);
+			// externally update UI states
+			TestObservableCtx.store.setState({
+				company: 'NEW CORPORATE INC',
+				isActive: true,
+				tags: { 5: 'MY SIXTH REMOTE' }
+			} as unknown as Partial<SourceData> );
+			await wait(() => {});
+			expect( screen.getByTestId( 'data-output' ).textContent ).toEqual(
+				JSON.stringify({
+					company: 'NEW CORPORATE INC',
+					isActive: true,
+					tag6: 'MY SIXTH REMOTE'
+				})
+			);
+
+			// externally reset any specific UI slice of the state
+			TestObservableCtx.store.resetState([ 'isActive', FULL_STATE_SELECTOR ]);
+			await wait(() => {});
+			expect( screen.getByTestId( 'data-output' ).textContent ).toEqual(
+				JSON.stringify({
+					company: 'VORTEXACO',
+					isActive: false,
+					tags6: 'laborum'
+				})
+			);
+			expect( TestObservableCtx.store.getState() ).toEqual( sourceData );
+		})
 	} );
 	describe( 'prehooks', () => {
 		describe( 'resetState prehook', () => {
@@ -957,193 +961,243 @@ describe( 'ReactObservableContext', () => {
 							subscribe: expect.any( Function )
 						})
 					);
-					describe( 'accessing the state', () => {
-						test( 'returns entire copy of the current state by default', () => {
-							const currentState = ObservableContext.store.getState();
-							expect( currentState ).not.toBe( defaultState );
-							expect( currentState ).toStrictEqual( defaultState );
-						} );
-						test( 'returns only copy of the state targeted by property paths', () => {
-							const expected = {
-								customer: {
-									name: { last: 'tLast' },
-									phone: null
-								},
-								type: 'TEST TYPE'
-							};
-							const currentState = ObservableContext.store.getState([
-								'customer.name.last',
-								'type',
-								'customer.phone'
-							]);
-							expect( currentState ).toEqual( expected );
-						} );
-						test( 'returns entire copy of the current state if ' + FULL_STATE_SELECTOR + ' found in property paths used', () => {
-							expect( ObservableContext.store.getState([
-								'customer.name.last',
-								'type',
-								'customer.phone',
-								FULL_STATE_SELECTOR
-							]) ).toEqual( defaultState );
-						} );
-						describe( 'when unchanged, guarantees data consistency by ensuring that...', () => {
-							function areExact( a : any, b : any ) {
-								if( a !== b ) { return false };
-								if( typeof a === 'object' ) {
-									for( const k in a ) {
-										return areExact( a[ k ], b[ k ] );
-									}
-								}
-								return true;
-							}
-							test( 'same entire state is returned for all default requests', () => {
-								expect( areExact(
-									ObservableContext.store.getState(),
-									ObservableContext.store.getState()
-								) ).toBe( true );
-							} );
-							test( 'same values at property paths are returned when using property paths', () => {
-								const pPaths = [ 'customer.name.last', 'type', 'customer.phone' ];
-								const s1 = ObservableContext.store.getState( pPaths );
-								const s2 = ObservableContext.store.getState( pPaths );
-								for( const path of pPaths ) {
-									expect( areExact(
-										getProperty( s1, path )._value,
-										getProperty( s2, path )._value
-									) ).toBe( true );
-								}
-							} );
-							test( 'same entire state is returned if ' + FULL_STATE_SELECTOR + ' found in property paths used', () => {
-								const pPaths = [ 'customer.name.last', 'type', FULL_STATE_SELECTOR, 'customer.phone' ];
-								expect( areExact(
-									ObservableContext.store.getState(),
-									ObservableContext.store.getState()
-								) ).toBe( true );
-							} );
-						} );
-						describe( 'guarantees data immutability by ensuring by...', () => {
-							test( 'returning readonly state for all default requests', () => {
-								expect( isReadonly(
-									ObservableContext.store.getState()
-								) ).toBe( true );
-							} );
-							test( 'returning readonly state for when using property paths', () => {
-								expect( isReadonly(
-									ObservableContext.store.getState([
-										'customer.name.last',
-										'type',
-										'customer.phone'
-									])
-								) ).toBe( true );
-							} );
-							test( 'returning entire state as readonly if ' + FULL_STATE_SELECTOR + ' found in property paths used', () => {
-								expect( isReadonly(
-									ObservableContext.store.getState([
-										'customer.name.last',
-										'type',
-										FULL_STATE_SELECTOR,
-										'customer.phone'
-									])
-								) ).toBe( true );
-							} );
-						} );
-					} );
-					test( 'updates internal state', async () => {
-						const { renderCount } : PerfValue = perf( React );
-						render( <TallyDisplay /> );
-						await wait(() => {});
-						expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 1 );
+				} );
+				describe( 'accessing the state', () => {
+					test( 'returns entire copy of the current state by default', () => {
 						const currentState = ObservableContext.store.getState();
-						ObservableContext.store.setState({ price: 45 });
-						let newState = { ...defaultState, price: 45 };
-						await wait(() => {});
-						await new Promise( resolve => setTimeout( resolve, 50 ) );
-						expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 2 );
-						expect( currentState ).not.toEqual( newState );
-						expect( ObservableContext.store.getState() ).toEqual( newState );
-						ObservableContext.store.resetState([ FULL_STATE_SELECTOR ]); // resets store internal state
-						await wait(() => {});
-						await new Promise( resolve => setTimeout( resolve, 50 ) );
-						expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 3 );
-						let currentState2 = ObservableContext.store.getState();
-						expect( currentState2 ).toStrictEqual( defaultState );
-						expect( currentState2 ).toStrictEqual( currentState );
-						// alter internal state to ready for default reset feature
-						ObservableContext.store.setState({ price: 300 });
-						currentState2 = ObservableContext.store.getState();
-						await wait(() => {});
-						await new Promise( resolve => setTimeout( resolve, 50 ) );
-						newState = { ...defaultState, price: 300 };
-						expect( currentState2 ).toEqual( newState );
-						expect( currentState2 ).not.toEqual( defaultState );
-						expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 4 );
-						// default reset results in no-operation
-						ObservableContext.store.resetState();
-						const currentState3 = ObservableContext.store.getState();
-						await wait(() => {});
-						await new Promise( resolve => setTimeout( resolve, 50 ) );
-						expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 4 );
-						expect( newState ).toEqual( currentState3 );
-						expect( defaultState ).not.toEqual( currentState3 );
-						expect( currentState2 ).toBe( currentState3 );
-						cleanupPerfTest();
-					}, 3e4 );
-					test( 'subscribes to state changes', async () => {
-						render( <TallyDisplay /> );
-						const changes = { price: 45 };
-						const onChangeMock = jest.fn();
-						const unsub = ObservableContext.store.subscribe( 'data-updated', onChangeMock );
-						expect( onChangeMock ).not.toHaveBeenCalled();
-						ObservableContext.store.setState( changes );
-						expect( onChangeMock ).toHaveBeenCalled();
-						expect( onChangeMock.mock.calls[ 0 ][ 0 ] ).toEqual( changes );
-						expect( onChangeMock.mock.calls[ 0 ][ 1 ] ).toEqual([[ 'price' ]]);
-						expect( onChangeMock.mock.calls[ 0 ][ 2 ] ).toEqual( changes );
-						expect( onChangeMock.mock.calls[ 0 ][ 3 ] ).toEqual( expect.any( Function ) );
-						onChangeMock.mockClear();
-						const changes2 = [
-							{
-								color: 'Navy',
-								type: 'TEST TYPE_2'
-							},
-							{ customer: { name: { last: 'T_last_2' } } }
-						];
-						ObservableContext.store.setState( changes2 );
-						expect( onChangeMock ).toHaveBeenCalled();
-						expect( onChangeMock.mock.calls[ 0 ][ 0 ] ).toEqual( changes2 );
-						expect( onChangeMock.mock.calls[ 0 ][ 1 ] ).toEqual([
-							[ 'color' ],
-							[ 'type' ],
-							[ 'customer', 'name', 'last' ]
-						]);
-						expect( onChangeMock.mock.calls[ 0 ][ 2 ] ).toEqual({
-							color: 'Navy',
-							customer: { name: { last: 'T_last_2' } },
-							type: 'TEST TYPE_2'
-						});
-						expect( onChangeMock.mock.calls[ 0 ][ 3 ] ).toEqual( expect.any( Function ) );
-						onChangeMock.mockClear();
-						ObservableContext.store.resetState([ FULL_STATE_SELECTOR ]);
-						expect( onChangeMock ).toHaveBeenCalled();
-						expect( onChangeMock.mock.calls[ 0 ][ 0 ] ).toEqual({
-							[ AutoImmutableModule.REPLACE_TAG ]: defaultState
-						});
-						expect( onChangeMock.mock.calls[ 0 ][ 1 ] ).toEqual([[]]);
-						expect( onChangeMock.mock.calls[ 0 ][ 2 ] ).toEqual( defaultState );
-						expect( onChangeMock.mock.calls[ 0 ][ 3 ] ).toEqual( expect.any( Function ) );
-						onChangeMock.mockClear();
-						unsub();
-						ObservableContext.store.setState( changes );
-						expect( onChangeMock ).not.toHaveBeenCalled();
-						ObservableContext.store.resetState([ FULL_STATE_SELECTOR ]);
-						expect( onChangeMock ).not.toHaveBeenCalled();
+						expect( currentState ).not.toBe( defaultState );
+						expect( currentState ).toStrictEqual( defaultState );
 					} );
+					test( 'returns only copy of the state targeted by property paths', () => {
+						const expected = {
+							customer: {
+								name: { last: 'tLast' },
+								phone: null
+							},
+							type: 'TEST TYPE'
+						};
+						const currentState = ObservableContext.store.getState([
+							'customer.name.last',
+							'type',
+							'customer.phone'
+						]);
+						expect( currentState ).toEqual( expected );
+					} );
+					test( 'returns entire copy of the current state if ' + FULL_STATE_SELECTOR + ' found in property paths used', () => {
+						expect( ObservableContext.store.getState([
+							'customer.name.last',
+							'type',
+							'customer.phone',
+							FULL_STATE_SELECTOR
+						]) ).toEqual( defaultState );
+					} );
+					describe( 'when unchanged, guarantees data consistency by ensuring that...', () => {
+						function areExact( a : any, b : any ) {
+							if( a !== b ) { return false };
+							if( typeof a === 'object' ) {
+								for( const k in a ) {
+									return areExact( a[ k ], b[ k ] );
+								}
+							}
+							return true;
+						}
+						test( 'same entire state is returned for all default requests', () => {
+							expect( areExact(
+								ObservableContext.store.getState(),
+								ObservableContext.store.getState()
+							) ).toBe( true );
+						} );
+						test( 'same values at property paths are returned when using property paths', () => {
+							const pPaths = [ 'customer.name.last', 'type', 'customer.phone' ];
+							const s1 = ObservableContext.store.getState( pPaths );
+							const s2 = ObservableContext.store.getState( pPaths );
+							for( const path of pPaths ) {
+								expect( areExact(
+									getProperty( s1, path )._value,
+									getProperty( s2, path )._value
+								) ).toBe( true );
+							}
+						} );
+						test( 'same entire state is returned if ' + FULL_STATE_SELECTOR + ' found in property paths used', () => {
+							const pPaths = [ 'customer.name.last', 'type', FULL_STATE_SELECTOR, 'customer.phone' ];
+							expect( areExact(
+								ObservableContext.store.getState(),
+								ObservableContext.store.getState()
+							) ).toBe( true );
+						} );
+					} );
+					describe( 'guarantees data immutability by ensuring by...', () => {
+						test( 'returning readonly state for all default requests', () => {
+							expect( isReadonly(
+								ObservableContext.store.getState()
+							) ).toBe( true );
+						} );
+						test( 'returning readonly state for when using property paths', () => {
+							expect( isReadonly(
+								ObservableContext.store.getState([
+									'customer.name.last',
+									'type',
+									'customer.phone'
+								])
+							) ).toBe( true );
+						} );
+						test( 'returning entire state as readonly if ' + FULL_STATE_SELECTOR + ' found in property paths used', () => {
+							expect( isReadonly(
+								ObservableContext.store.getState([
+									'customer.name.last',
+									'type',
+									FULL_STATE_SELECTOR,
+									'customer.phone'
+								])
+							) ).toBe( true );
+						} );
+					} );
+				} );
+				test( 'updates internal state', async () => {
+					const { renderCount } : PerfValue = perf( React );
+					const changes = {
+						color: 'Blue',
+						customer: {
+							phone: '555-5000'
+						}
+					};
+					const TestObsCtx = createContext( defaultState as Partial<TestState> );
+					const TestClient = TestObsCtx.connect([
+						'color', 'customer.name.last', 'type'
+					])(({ data }) => (
+						<div data-testid="data-output">
+							{ JSON.stringify( data ) }
+						</div>
+					));
+					render( <TestClient /> );
+					await wait(() => {});
+					expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 1 );
+					const currentState = TestObsCtx.store.getState();
+					TestObsCtx.store.setState({ price: 45 });
+					let newState = { ...defaultState, price: 45 };
+					await wait(() => {});
+					await new Promise( resolve => setTimeout( resolve, 50 ) );
+					expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 2 );
+					expect( currentState ).not.toEqual( newState );
+					expect( TestObsCtx.store.getState() ).toEqual( newState );
+					TestObsCtx.store.resetState([ FULL_STATE_SELECTOR ]); // resets store internal state
+					await wait(() => {});
+					await new Promise( resolve => setTimeout( resolve, 50 ) );
+					expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 3 );
+					let currentState2 = TestObsCtx.store.getState();
+					expect( currentState2 ).toStrictEqual( defaultState );
+					expect( currentState2 ).toStrictEqual( currentState );
+					// alter internal state to ready for default reset feature
+					TestObsCtx.store.setState({ price: 300 });
+					currentState2 = TestObsCtx.store.getState();
+					await wait(() => {});
+					await new Promise( resolve => setTimeout( resolve, 50 ) );
+					newState = { ...defaultState, price: 300 };
+					expect( currentState2 ).toEqual( newState );
+					expect( currentState2 ).not.toEqual( defaultState );
+					expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 4 );
+					// default reset results in no-operation
+					TestObsCtx.store.resetState();
+					const currentState3 = TestObsCtx.store.getState();
+					await wait(() => {});
+					await new Promise( resolve => setTimeout( resolve, 50 ) );
+					expect( ( renderCount.current.TallyDisplay as RenderCountField ).value ).toBe( 4 );
+					expect( newState ).toEqual( currentState3 );
+					expect( defaultState ).not.toEqual( currentState3 );
+					expect( currentState2 ).toBe( currentState3 );
+					TestObsCtx.dispose();
+					cleanupPerfTest();
+				}, 3e4 );
+				test( 'subscribes to state changes', async () => {
+					const changes = {
+						color: 'Blue',
+						customer: {
+							phone: '555-5000'
+						}
+					};
+					const TestObsCtx = createContext( defaultState as Partial<TestState> );
+					const useTestStream = TestObsCtx.useStream;
+					const TestClient = () => {
+						const { data, resetState, setState } = useTestStream([ FULL_STATE_SELECTOR ]);
+						const doReset = useCallback(() => {
+							resetState([ 'color', 'customer.phone']);
+						}, [ resetState ]);
+						const doSet = useCallback(() => {
+							setState( changes as TestState )
+						}, [ setState ]);
+						return (
+							<>
+								<div data-testid="data-output">
+									{ JSON.stringify( data ) }
+								</div>
+								<button
+									onClick={ doSet }
+									onDoubleClick={ doReset }
+								/>
+							</>
+						);
+					}
+					render( <TestClient /> );
+					const onChangeMock = jest.fn();
+					const unsub = TestObsCtx.store.subscribe( 'data-updated', onChangeMock );
+					expect( onChangeMock ).not.toHaveBeenCalled();
+					fireEvent.click( screen.getByRole( 'button' ) ); // triggers setState
+					await wait(() => {});
+					expect( onChangeMock ).toHaveBeenCalled();
+					expect( onChangeMock.mock.calls[ 0 ][ 0 ] ).toEqual( changes );
+					expect( onChangeMock.mock.calls[ 0 ][ 1 ] ).toEqual([
+						[ 'color' ], [ 'customer', 'phone' ]
+					]);
+					expect( onChangeMock.mock.calls[ 0 ][ 2 ] ).toEqual( changes );
+					expect( onChangeMock.mock.calls[ 0 ][ 3 ] ).toEqual( expect.any( Function ) );
+					onChangeMock.mockClear();
+					fireEvent.click( screen.getByRole( 'button' ) ); // noop for repeat setState with same payload
+					await wait(() => {});
+					expect( onChangeMock ).not.toHaveBeenCalled();
+					fireEvent.dblClick( screen.getByRole( 'button' ) ); // triggers resetState
+					await wait(() => {});
+					expect( onChangeMock ).toHaveBeenCalled();
+					expect( onChangeMock.mock.calls[ 0 ][ 0 ] ).toEqual({
+						color: {
+							[ AutoImmutableModule.REPLACE_TAG]: 'Burgundy'
+						},
+						customer: {
+							phone: {
+								[ AutoImmutableModule.REPLACE_TAG ]: null
+							}
+						}
+					});
+					expect( onChangeMock.mock.calls[ 0 ][ 1 ] ).toEqual([
+						[ 'color' ], [ 'customer', 'phone' ]
+					]);
+					expect( onChangeMock.mock.calls[ 0 ][ 2 ] ).toEqual({
+						color: 'Burgundy',
+						customer: {
+							phone: null
+						}
+					});
+					expect( onChangeMock.mock.calls[ 0 ][ 3 ] ).toEqual( expect.any( Function ) );
+					onChangeMock.mockClear();
+					unsub();
+					let currDisplay = screen.getByTestId( 'data-output' ).textContent;
+					fireEvent.click( screen.getByRole( 'button' ) ); // triggers setState
+					await wait(() => {});
+					expect( currDisplay ).not.toEqual( // change occurred
+						screen.getByTestId( 'data-output' ).textContent
+					);
+					expect( onChangeMock ).not.toHaveBeenCalled();
+					currDisplay = screen.getByTestId( 'data-output' ).textContent
+					fireEvent.dblClick( screen.getByRole( 'button' ) ); // triggers resetState
+					await wait(() => {});
+					expect( currDisplay ).not.toEqual( // change occurred
+						screen.getByTestId( 'data-output' ).textContent
+					);
+					expect( onChangeMock ).not.toHaveBeenCalled();
+					TestObsCtx.dispose();
 				} );
 			} );
 		} );
-		// @debug
-		describe( '1cccc', () => {
-		// describe( 'useStream(...)', () => {
+		describe( 'useStream(...)', () => {
 			type handler = ( ...args : Array<unknown> ) => void;
 			let Client : React.FC<{
 				selectorMap? : SelectorMap,
@@ -1186,7 +1240,7 @@ describe( 'ReactObservableContext', () => {
 				/* eslint-disable react/display-name */
 			});
 			afterAll(() => { ObservableContext.dispose() });
-			test( 'returns an observable context store', () => {
+			test( 'returns a streaming store', () => {
 				let store : Store<SourceData>;
 				const onChange : handler = s => { store = s as typeof store };
 				render(
@@ -1251,112 +1305,30 @@ describe( 'ReactObservableContext', () => {
 							</Wrapper>
 						);
 						expect( Object.keys( _data ) )
-							.toEqual( Object.keys( selectorMapOnRerender ));
-					});
-					test( 'destroys previous and obtains new connection', () => {
-						const sourceData = createSourceData();
-						const cache = new AutoImmutable( sourceData );
-						const connection = cache.connect();
-						const disconnectSpy = jest.spyOn( connection, 'disconnect' );
-						const connectSpy = jest
-							.spyOn( AutoImmutable.prototype, 'connect' )
-							.mockReturnValue( connection );
-						const mockUnsubscribe = jest.fn();
-						const testCtx = new EagleEyeContext( sourceData );
-						const testChannel = testCtx.store( selectorMapOnRender );
-						const subsribeSpy = jest
-							.spyOn( testChannel, 'testC
-						const storeSpy = jest
-							.spyOn( EagleEyeContext.prototype, 'store', 'get' )
-							.mockReturnValue({
-
-							});
-						
-						const { rerender } = render(
-							<Wrapper>
-								<Client selectorMap={ selectorMapOnRender } />
-							</Wrapper>
-						);
-						expect( connectSpy ).toHaveBeenCalledTimes( 3 );
-						expect( subscribeSpy ).toHaveBeenCalledTimes( 1 );
-						expect( disconnectSpy ).not.toHaveBeenCalled();
-						expect( mockUnsubscribe ).not.toHaveBeenCalled();
-						rerender(
-							<Wrapper>
-								<Client selectorMap={ selectorMapOnRerender } />
-							</Wrapper>
-						);
-						expect( connectSpy ).toHaveBeenCalledTimes( 4 );
-						expect( subscribeSpy ).toHaveBeenCalledTimes( 2 );
-						expect( disconnectSpy ).toHaveBeenCalledTimes( 1 );
-						expect( mockUnsubscribe ).toHaveBeenCalledTimes( 1 );
-
-						disconnectSpy.mockRestore();
-						connectSpy.mockRestore();
-						subscribeSpy.mockRestore();
+							.toEqual( Object.keys( selectorMapOnRerender ) );
 					});
 					describe( 'when the new selectorMap is not empty', () => {
 						test( 'refreshes state data', () => {
-							const cache = new AutoImmutable( createSourceData() );
-							const connection = cache.connect();
-							const getSpy = jest
-								.spyOn( connection, 'get' )
-								.mockReturnValue( mockGetReturnValue );
-							const connectSpy = jest
-								.spyOn( cache, 'connect' )
-								.mockReturnValue( connection )
-							const cacheSpy = jest
-								.spyOn( AutoImmutableModule, 'default' )
-								.mockReturnValue( cache );
-							expect( getSpy ).not.toHaveBeenCalled();
+							let _data : typeof mockGetReturnValue = {};
+							const onChange = (({ data } : {
+								data : typeof mockGetReturnValue
+							}) => { _data = data }) as handler;
 							const { rerender } = render(
 								<Wrapper>
-									<Client selectorMap={ selectorMapOnRender } />
+									<Client onChange={ onChange } />
 								</Wrapper>
 							);
-							expect( getSpy ).toHaveBeenCalledTimes( 2 );
-							expect( getSpy.mock.calls[ 1 ] ).toEqual(
-								Object.values( selectorMapOnRender )
-							);
-							getSpy.mockClear();
+							expect( _data ).toEqual({});
 							rerender(
 								<Wrapper>
-									<Client selectorMap={ selectorMapOnRerender } />
+									<Client
+										onChange={ onChange }
+										selectorMap={ selectorMapOnRerender }
+									/>
 								</Wrapper>
 							);
-							expect( getSpy ).toHaveBeenCalledTimes( 1 );
-							expect( getSpy ).toHaveBeenCalledWith(
-								...Object.values( selectorMapOnRerender )
-							);
-							getSpy.mockRestore();
-							connectSpy.mockRestore();
-							cacheSpy.mockRestore();
-						});
-						test( 'sets up new subscription with the consumer', () => {
-							const mockUnsubscribe = jest.fn();
-							const base = new EagleEyeContext( sourceData );
-							const subscribeSpy = jest
-								.spyOn( base.store, 'subscribe' )
-								.mockReturnValue( mockUnsubscribe );
-							const { rerender } = render(
-								<Wrapper>
-									<Client selectorMap={ selectorMapOnRender } />
-								</Wrapper>
-							);
-							expect( subscribeSpy ).toHaveBeenCalledTimes( 2 );
-							expect( mockUnsubscribe ).toHaveBeenCalledTimes( 0 );
-							subscribeSpy.mockRestore();
-							rerender(
-								<Wrapper>
-									<Client selectorMap={ selectorMapOnRerender } />
-								</Wrapper>
-							);
-							expect( subscribeSpy ).toHaveBeenCalledTimes( 2 );
-							expect( mockUnsubscribe ).toHaveBeenCalledTimes( 1 );
-
-							subscribeSpy.mockRestore();
-
-							base.dispose();
+							expect( Object.keys( _data ) )
+								.toEqual( Object.keys( selectorMapOnRerender ));
 						});
 					});
 				} );
@@ -1402,134 +1374,26 @@ describe( 'ReactObservableContext', () => {
 								.toEqual( Object.keys( selectorMapOnRender ));
 							rerender(
 								<Wrapper>
-									<Client
-										onChange={ onChange }
-										selectorMap={{}}
-									/>
+									<Client onChange={ onChange } />
 								</Wrapper>
 							);
-							expect( Object.keys( _data ) )
-								.toEqual( Object.keys({}));
-						} );
-						test( 'destroys previous and obtains new connection', () => {
-							const sourceData = createSourceData();
-							const cache = new AutoImmutable( sourceData );
-							const connection = cache.connect();
-							const disconnectSpy = jest.spyOn( connection, 'disconnect' );
-							const getSpy = jest
-								.spyOn( connection, 'get' )
-								.mockReturnValue( mockGetReturnValue );
-							const connectSpy = jest
-								.spyOn( cache, 'connect' )
-								.mockReturnValue( connection )
-							const cacheSpy = jest
-								.spyOn( AutoImmutableModule, 'default' )
-								.mockReturnValue( cache );
-							const mockUnsubscribe = jest.fn();
-
-							const base = new EagleEyeContext( sourceData );
-							const subscribeSpy = jest
-								.spyOn( base.store, 'subscribe' )
-								.mockReturnValue( mockUnsubscribe );
-
-							const { rerender } = render(
-								<Wrapper>
-									<Client selectorMap={ selectorMapOnRender } />
-								</Wrapper>
-							);
-							expect( connectSpy ).toHaveBeenCalledTimes( 3 );
-							expect( subscribeSpy ).toHaveBeenCalledTimes( 1 );
-							expect( disconnectSpy ).not.toHaveBeenCalled();
-							expect( mockUnsubscribe ).not.toHaveBeenCalled();
-							connectSpy.mockClear();
-							subscribeSpy.mockClear();
-							rerender(
-								<Wrapper>
-									<Client selectorMap={ selectorMapOnRerender } />
-								</Wrapper>
-							);
-							expect( connectSpy ).toHaveBeenCalledTimes( 1 );
-							expect( subscribeSpy ).toHaveBeenCalledTimes( 1 );
-							expect( disconnectSpy ).toHaveBeenCalledTimes( 1 );
-							expect( mockUnsubscribe ).toHaveBeenCalledTimes( 1 );
-							
-							getSpy.mockRestore();
-							subscribeSpy.mockRestore();
-							connectSpy.mockRestore();
-							disconnectSpy.mockRestore();
-							cacheSpy.mockRestore();
-
-							base.dispose();
+							expect( _data ).toEqual({});
 						} );
 						test( 'refreshes state data with empty object', async () => {
-							const sourceData = createSourceData();
-							const cache = new AutoImmutable( sourceData );
-							const connection = cache.connect();
-							const getSpy = jest
-								.spyOn( connection, 'get' )
-								.mockReturnValue( mockGetReturnValue );
-							const connectSpy = jest
-								.spyOn( cache, 'connect' )
-								.mockReturnValue( connection )
-							const cacheSpy = jest
-								.spyOn( AutoImmutableModule, 'default' )
-								.mockReturnValue( cache );
-
-							expect( getSpy ).not.toHaveBeenCalled();
 							const { rerender } = render(
 								<Wrapper>
 									<Client selectorMap={ selectorMapOnRender } />
 								</Wrapper>
 							);
 							await wait(() => {});
-							expect( getSpy ).toHaveBeenCalledTimes( 2 );
-							expect( getSpy.mock.calls[ 1 ] ).toEqual(
-								Object.values( selectorMapOnRender )
-							);
 							expect( screen.getByTestId( 'data-output' ).textContent ).not.toEqual( '{}' );
-							getSpy.mockClear();
-							rerender(
-								<Wrapper>
-									<Client selectorMap={{}} />
-								</Wrapper>
-							);
+							rerender( <Wrapper><Client /></Wrapper> );
 							await wait(() => {});
-							expect( getSpy ).not.toHaveBeenCalled();
 							expect( screen.getByTestId( 'data-output' ).textContent ).toEqual( '{}' );
-							
-							getSpy.mockRestore();
-							connectSpy.mockRestore();
-							cacheSpy.mockRestore();
-						} );
-						test( 'does not set up new subscription with the consumer', () => {
-							const mockUnsubscribe = jest.fn();
-							const base = new EagleEyeContext( sourceData );
-							const subscribeSpy = jest
-								.spyOn( base.store, 'subscribe' )
-								.mockReturnValue( mockUnsubscribe );
-							const { rerender } = render(
-								<Wrapper>
-									<Client selectorMap={ selectorMapOnRender } />
-								</Wrapper>
-							);
-							expect( subscribeSpy ).toHaveBeenCalledTimes( 1 );
-							expect( mockUnsubscribe ).not.toHaveBeenCalled();
-							subscribeSpy.mockClear();
-							rerender(
-								<Wrapper>
-									<Client selectorMap={{}} />
-								</Wrapper>
-							);
-							expect( subscribeSpy ).not.toHaveBeenCalled();
-							expect( mockUnsubscribe ).toHaveBeenCalledTimes( 1 );
-							
-							subscribeSpy.mockRestore();
-
-							base.dispose();
 						} );
 					} );
 					describe( 'and existing data is empty', () => {
-						test( 'leaves the store as-is on selctorMap change', () => {
+						test( 'leaves the store as-is on selctorMap change', async () => {
 							let _origData : typeof mockGetReturnValue = {};
 							let _data : typeof mockGetReturnValue = {};
 							const onChange = (({ data } : {
@@ -1543,9 +1407,9 @@ describe( 'ReactObservableContext', () => {
 									/>
 								</Wrapper>
 							);
+							await wait(() => {});
 							_origData = _data;
-							expect( Object.keys( _origData ) )
-								.toEqual( Object.keys({}));
+							expect( _origData ).toEqual({});
 							rerender(
 								<Wrapper>
 									<Client
@@ -1554,125 +1418,23 @@ describe( 'ReactObservableContext', () => {
 									/>
 								</Wrapper>
 							);
+							await wait(() => {});
 							expect( _data ).toBe( _origData );
 						} );
 						test( 'performs no state data update', async () => {
-							const cache = new AutoImmutable( createSourceData() );
-							const connection = cache.connect();
-							const getSpy = jest
-								.spyOn( connection, 'get' )
-								.mockReturnValue( mockGetReturnValue );
-							const connectSpy = jest
-								.spyOn( cache, 'connect' )
-								.mockReturnValue( connection )
-							const cacheSpy = jest
-								.spyOn( AutoImmutableModule, 'default' )
-								.mockReturnValue( cache );
-							expect( getSpy ).not.toHaveBeenCalled();
-							const { rerender } = render(
-								<Wrapper>
-									<Client selectorMap={{}} />
-								</Wrapper>
-							);
+							const { rerender } = render( <Wrapper><Client /></Wrapper> );
 							await wait(() => {});
-							expect( getSpy ).not.toHaveBeenCalled();
-							expect( screen.getByTestId( 'data-output' ).textContent ).toEqual( '{}' );
-							getSpy.mockClear();
-							rerender(
-								<Wrapper>
-									<Client selectorMap={{}} />
-								</Wrapper>
-							);
+							const origDisplay = screen.getByTestId( 'data-output' ).textContent;
+							expect( origDisplay ).toEqual( '{}' );
+							rerender( <Wrapper><Client selectorMap={{}} /></Wrapper> );
 							await wait(() => {});
-							expect( getSpy ).not.toHaveBeenCalled();
-							expect( screen.getByTestId( 'data-output' ).textContent ).toEqual( '{}' );
-
-							getSpy.mockRestore();
-							connectSpy.mockRestore();
-							cacheSpy.mockRestore();
-						} );
-						test( 'does not set up new subscription with the consumer', () => {
-							const mockUnsubscribe = jest.fn();
-							const mockSubscribe = jest.fn()
-								.mockReturnValue( mockUnsubscribe );
-							const base = new EagleEyeContext();
-							const subscribeSpy = jest
-								.spyOn( base.store, 'subscribe' )
-								.mockReturnValue( mockSubscribe );
-							const { rerender } = render(
-								<Wrapper>
-									<Client selectorMap={{}} />
-								</Wrapper>
-							);
-							expect( subscribeSpy ).not.toHaveBeenCalled();
-							expect( mockUnsubscribe ).not.toHaveBeenCalled();
-							rerender(
-								<Wrapper>
-									<Client selectorMap={{}} />
-								</Wrapper>
-							);
-							expect( subscribeSpy ).not.toHaveBeenCalled();
-							expect( mockUnsubscribe ).not.toHaveBeenCalled();
-
-							subscribeSpy.mockRestore();
-
-							base.dispose();
-						} );
-						describe( 'and previous property path is empty', () => {
-							test( 'skips refreshing connection: no previous connections to the consumer existed', () => {
-								const sourceData = createSourceData();
-								const cache = new AutoImmutable( sourceData );
-								const connection = cache.connect();
-								const disconnectSpy = jest.spyOn( connection, 'disconnect' );
-								const getSpy = jest
-									.spyOn( connection, 'get' )
-									.mockReturnValue( mockGetReturnValue );
-								const connectSpy = jest
-									.spyOn( cache, 'connect' )
-									.mockReturnValue( connection )
-								const cacheSpy = jest
-									.spyOn( AutoImmutableModule, 'default' )
-									.mockReturnValue( cache );
-								const mockUnsubscribe = jest.fn();
-								const base = new EagleEyeContext( sourceData );
-								const subscribeSpy = jest
-									.spyOn( base.store, 'subscribe' )
-									.mockReturnValue( mockUnsubscribe );
-								const { rerender } = render(
-									<Wrapper>
-										<Client selectorMap={{}} />
-									</Wrapper>
-								);
-								expect( connectSpy ).toHaveBeenCalledTimes( 3 );
-								expect( subscribeSpy ).not.toHaveBeenCalled();
-								expect( disconnectSpy ).not.toHaveBeenCalled();
-								expect( mockUnsubscribe ).not.toHaveBeenCalled();
-								connectSpy.mockClear();
-								rerender(
-									<Wrapper>
-										<Client selectorMap={{}} />
-									</Wrapper>
-								);
-								expect( connectSpy ).not.toHaveBeenCalled();
-								expect( subscribeSpy ).not.toHaveBeenCalled();
-								expect( disconnectSpy ).not.toHaveBeenCalled();
-								expect( mockUnsubscribe ).not.toHaveBeenCalled();
-
-								getSpy.mockRestore();
-								connectSpy.mockRestore();
-								subscribeSpy.mockRestore();
-								disconnectSpy.mockRestore();
-								cacheSpy.mockRestore();
-
-								base.dispose();
-							} );
 						} );
 					} );
 				} );
 			} );
 			describe( 'store.data', () => {
 				interface Artefact<T extends {}> {
-					Client : React.FC<{selectorMap : SelectorMap}>,
+					Client : React.FC<{selectorMap? : SelectorMap}>,
 					meta : { store : Store<T> }
 				};
 				let setup : <T extends {}>( ctx : ObservableContextType<T> ) => Artefact<T>;
@@ -1691,11 +1453,11 @@ describe( 'ReactObservableContext', () => {
 					};
 				});
 				test( 'carries the latest state data as referenced by the selectorMap', async () => {
-					let store = {} as Store<SourceData>;
-					const onChange : handler = s => { store = s as typeof store };
+					const { ObservableContext, Wrapper } = createObservable( sourceData );
+					const { Client, meta } = setup( ObservableContext );
 					render(
 						<Wrapper>
-							<Client onChange={ onChange } selectorMap={{
+							<Client selectorMap={{
 								city3: 'history.places[2].city',
 								country3: 'history.places[2].country',
 								friends: 'friends',
@@ -1718,24 +1480,24 @@ describe( 'ReactObservableContext', () => {
 						tag7: defaultState.tags[ 6 ],
 						tags: defaultState.tags
 					};
-					expect( store.data ).toEqual( expectedValue );
-					store.setState({
+					expect( meta.store.data ).toEqual( expectedValue );
+					meta.store.setState({
 						friends: {
 							[ AutoImmutableModule.MOVE_TAG ]: [ -1, 1 ]
-						} as unknown as Array<any>,
+						},
 						isActive: true,
 						history: {
 							places: {
 								2: {
 									city: 'Marakesh',
 									country: 'Morocco'
-								}  as SourceData["history"]["places"][0]
-							} as unknown as SourceData["history"]["places"]
+								}
+							}
 						},
-						tags: { [ AutoImmutableModule.DELETE_TAG ]: [ 3, 5 ] } as unknown as SourceData["tags"]
-					} as SourceData );
+						tags: { [ AutoImmutableModule.DELETE_TAG ]: [ 3, 5 ] }
+					} as unknown as SourceData );
 					await new Promise( resolve => setTimeout( resolve, 10 ) );
-					expect( store.data ).toEqual({
+					expect( meta.store.data ).toEqual({
 						...expectedValue,
 						city3: 'Marakesh',
 						country3: 'Morocco',
@@ -1745,6 +1507,7 @@ describe( 'ReactObservableContext', () => {
 						tag7: undefined,
 						tags: [ 0, 1, 2, 4, 6 ].map( i => defaultState.tags[ i ] )
 					});
+					ObservableContext.dispose();
 				}, 3e4 );
 				test( 'holds the complete current state object whenever `@@STATE` entry appears in the selectorMap', async () => {
 					const { ObservableContext, Wrapper } = createObservable( createSourceData() );
@@ -1798,11 +1561,12 @@ describe( 'ReactObservableContext', () => {
 					ObservableContext.dispose();
 				} );
 				test( 'holds an empty object when no renderKeys provided ', async () => {
-					let store = {} as Store<SourceData>;
-					const onChange : handler = s => { store = s as typeof store };
-					render( <Wrapper><Client onChange={ onChange } /></Wrapper> );
-					expect( store.data ).toEqual({});
-					store.setState({ // can still update state
+					const { ObservableContext, Wrapper } = createObservable( createSourceData() );
+					const { Client, meta } = setup( ObservableContext );
+					render( <Wrapper><Client /></Wrapper> );
+					await wait(() => {});
+					expect( meta.store.data ).toEqual({});
+					meta.store.setState({ // can still update state
 						isActive: true,
 						history: {
 							places: {
@@ -1810,41 +1574,45 @@ describe( 'ReactObservableContext', () => {
 									city: 'Marakesh',
 									country: 'Morocco'
 								}
-							} as unknown as SourceData["history"]["places"]
-						} as SourceData["history"]
-					} as SourceData );
-					await new Promise( resolve => setTimeout( resolve, 10 ) );
-					expect( store.data ).toEqual({});
+							}
+						}
+					} as unknown as SourceData );
+					await wait(() => {});
+					expect( meta.store.data ).toEqual({});
+					ObservableContext.dispose();
 				} );
 			} );
 			describe( 'store.resetState', () => {
+				let sourceData : SourceData;
 				let Client : React.FC<{
 					selectorMap? : Record<string, string>;
 					resetPaths? : Array<string>
 				}>;
-				beforeAll(() => {
+				let ObservableContext : ObservableContextType<SourceData>;
+				beforeAll(() => { sourceData = createSourceData() });
+				beforeEach(() => {
+					ObservableContext = createContext( sourceData );
 					const useStream = ObservableContext.useStream;
 					Client = props => {
-						const { resetState } = useStream( props.selectorMap );
+						const { data, resetState } = useStream( props.selectorMap );
 						const doReset = useCallback(() => {
 							resetState( props.resetPaths );
 						}, [ resetState ]);
-						return ( <button onClick={ doReset } /> )
+						return (
+							<>
+								<div data-testid="data-output">
+									{ JSON.stringify( data ) }
+								</div>
+								<button onClick={ doReset } />
+							</>
+						);
 					};
 				});
+				afterEach(() => { ObservableContext.dispose() });
 				describe( 'when selectorMap is present in the consumer', () => {
 					describe( 'and called with own property paths arguments to reset', () => {
 						test( 'resets with original slices and removes non-original slices for entries found in property paths', async () => {
-							const sourceData = createSourceData();
-							const autoImmutable = new AutoImmutable( sourceData );
-							const connection = autoImmutable.connect();
-							const setSpy = jest.spyOn( connection, 'set' );
-							jest.spyOn( autoImmutable, 'connect' )
-								.mockReturnValue( connection );
-							const connectSpy = jest
-								.spyOn( AutoImmutableModule, 'default' )
-								.mockReturnValue( autoImmutable )
-							const args = [ 'blatant', 'company', 'xylophone', 'yodellers', 'zenith' ];
+							const args = [ 'blatant', 'tags[5]', 'company', 'history.places[2].year', 'xylophone', 'yodellers', 'zenith' ];
 							render(
 								<Wrapper>
 									<Client
@@ -1854,62 +1622,50 @@ describe( 'ReactObservableContext', () => {
 								</Wrapper>
 							);
 							await wait(() => {});
-							setSpy.mockClear();
-							fireEvent.click( screen.getByRole( 'button' ) );
-							expect( setSpy ).toHaveBeenCalledTimes( 1 );
-							expect( setSpy.mock.calls[ 0 ][ 0 ] ).toEqual({
-								[ AutoImmutableModule.DELETE_TAG ]: [
-									'blatant', 'xylophone', 'yodellers', 'zenith'
-								],
-								company: {
-									[ AutoImmutableModule.REPLACE_TAG ]: sourceData.company
-								}
-							});
-							connectSpy.mockRestore();
-							setSpy.mockRestore();
-						} );
-					} );
-					describe( 'and called with NO  own property paths argument to reset', () => {
-						test( 'calculates setstate changes using state slice matching property paths derived from the selectorMap', async () => {
-							const sourceData = createSourceData();
-							const autoImmutable = new AutoImmutable( sourceData );
-							const connection = autoImmutable.connect();
-							const setSpy = jest.spyOn( connection, 'set' );
-							jest.spyOn( autoImmutable, 'connect' )
-								.mockReturnValue( connection );
-							const connectSpy = jest
-								.spyOn( AutoImmutableModule, 'default' )
-								.mockReturnValue( autoImmutable )
-							render(
-								<Wrapper>
-									<Client selectorMap={ selectorMapOnRender } />
-								</Wrapper>
-							);
+							const isActive2 = !sourceData.isActive;
+							expect( screen.getByTestId( 'data-output' ).textContent )
+								.toEqual( JSON.stringify({
+									year3: sourceData.history.places[2].year,
+									isActive: sourceData.isActive,
+									tag6: sourceData.tags[ 5 ]
+								}) );
+							ObservableContext.store.setState({
+								history: { places: { 2: { year: '3035' } } },
+								isActive: isActive2,
+								tags: { 5: 'JUST-TESTING' }
+							} as unknown as SourceData );
 							await wait(() => {});
-							setSpy.mockClear();
-							fireEvent.click( screen.getByRole( 'button' ) );
-							expect( setSpy ).toHaveBeenCalledTimes( 1 );
-							expect( setSpy.mock.calls[ 0 ][ 0 ] ).toEqual({
-								history: {
-									places: {
-									    2: {
-									    	year: {
-									    		[ AutoImmutableModule.REPLACE_TAG ]: sourceData.history.places[ 2 ].year,
-									      	},
-									    },
-									},
-								},
-								isActive: {
-									[ AutoImmutableModule.REPLACE_TAG ]: sourceData.isActive
-								},
-								tags: {
-									5: {
-										[ AutoImmutableModule.REPLACE_TAG ]: sourceData.tags[ 5 ]
-									},
-								},
+							expect( screen.getByTestId( 'data-output' ).textContent )
+								.toEqual( JSON.stringify({
+									year3: '3035',
+									isActive: isActive2,
+									tag6: 'JUST-TESTING'
+								}) );
+							expect( ObservableContext.store.getState() ).toEqual({
+								...sourceData,
+								history: (() => {
+									const places = [ ...sourceData.history.places ];
+									places[ 2 ] = { ...places[ 2 ], year: '3035' };
+									return { ...sourceData.history, places };
+								})(),
+								isActive: isActive2,
+								tags: (() => {
+									const tags = [ ...sourceData.tags ];
+									tags[ 5 ] = 'JUST-TESTING';
+									return tags;
+								})()
 							});
-							connectSpy.mockRestore();
-							setSpy.mockRestore();
+							fireEvent.click( screen.getByRole( 'button' ) );
+							await wait(() => {});
+							expect( screen.getByTestId( 'data-output' ).textContent )
+								.toEqual( JSON.stringify({
+									year3: sourceData.history.places[2].year,
+									isActive: isActive2,
+									tag6: sourceData.tags[ 5 ]
+								}) );
+							expect( ObservableContext.store.getState() ).toEqual({
+								...sourceData, isActive: isActive2
+							});
 						} );
 					} );
 				} );
@@ -1917,53 +1673,58 @@ describe( 'ReactObservableContext', () => {
 					describe( 'and called with own property paths arguments to reset', () => {
 						test( 'resets with original slices and removes non-original slices for entries found in property paths', async () => {
 							const args = [ 'blatant', 'company', 'xylophone', 'yodellers', 'zenith' ];
-							const sourceData = createSourceData();
-							const autoImmutable = new AutoImmutable( sourceData );
-							const connection = autoImmutable.connect();
-							const setSpy = jest.spyOn( connection, 'set' );
-							jest
-								.spyOn( autoImmutable, 'connect' )
-								.mockReturnValue( connection );
-							const connectSpy = jest
-								.spyOn( AutoImmutableModule, 'default' )
-								.mockReturnValue( autoImmutable );
 							render( <Wrapper><Client resetPaths={ args } /></Wrapper> );
 							await wait(() => {});
-							setSpy.mockClear();
-							fireEvent.click( screen.getByRole( 'button' ) );
-							expect( setSpy ).toHaveBeenCalledTimes( 1 );
-							expect( setSpy.mock.calls[ 0 ][ 0 ] ).toEqual({
-								[ AutoImmutableModule.DELETE_TAG ]: [
-									'blatant','xylophone','yodellers','zenith'
-								],
-								company: {
-									[ AutoImmutableModule.REPLACE_TAG ]: sourceData.company
-								},
+							const origTextContent = screen.getByTestId( 'data-output' ).textContent;
+							expect( origTextContent ).toEqual( '{}' );
+							ObservableContext.store.setState({
+								blatant: true,
+								company: 'SOME NEW TEST INC.',
+								xylophone: 'Ruggedly melodic', 
+								yodellers: 'Cartoonishly joyful'
+							} as unknown as SourceData );
+							await wait(() => {});
+							expect( screen.getByTestId( 'data-output' ).textContent ).toBe( origTextContent );
+							expect( ObservableContext.store.getState() ).toEqual({
+								...sourceData,
+								blatant: true,
+								company: 'SOME NEW TEST INC.',
+								xylophone: 'Ruggedly melodic', 
+								yodellers: 'Cartoonishly joyful'
 							});
-							setSpy.mockRestore();
-							connectSpy.mockRestore();
+							fireEvent.click( screen.getByRole( 'button' ) );
+							await wait(() => {});
+							expect( screen.getByTestId( 'data-output' ).textContent ).toBe( origTextContent );
+							expect( ObservableContext.store.getState() ).toEqual( sourceData );
 						} );
 					} );
 					describe( 'and called with NO own property paths arguments to reset', () => {
-						test( 'calculates setstate changes using no property paths -- the consumer applies no store reset [see usestore(...)]', async () => {
-							const sourceData = createSourceData();
-							const autoImmutable = new AutoImmutable( sourceData );
-							const connection = autoImmutable.connect();
-							const setSpy = jest.spyOn( connection, 'set' );
-							jest.spyOn( autoImmutable, 'connect' )
-								.mockReturnValue( connection );
-							const connectSpy = jest
-								.spyOn( AutoImmutableModule, 'default' )
-								.mockReturnValue( autoImmutable )
+						test( 'results in no-op', async () => {
 							render( <Wrapper><Client /></Wrapper> );
 							await wait(() => {});
-							setSpy.mockClear();
+							const origTextContent = screen.getByTestId( 'data-output' ).textContent;
+							expect( origTextContent ).toEqual( '{}' );
+							ObservableContext.store.setState({
+								blatant: true,
+								company: 'SOME NEW TEST INC.',
+								xylophone: 'Ruggedly melodic', 
+								yodellers: 'Cartoonishly joyful'
+							} as unknown as SourceData );
+							await wait(() => {});
+							expect( screen.getByTestId( 'data-output' ).textContent ).toBe( origTextContent );
+							
+							const alteredState = ObservableContext.store.getState();
+							expect( alteredState ).toEqual({
+								...sourceData,
+								blatant: true,
+								company: 'SOME NEW TEST INC.',
+								xylophone: 'Ruggedly melodic', 
+								yodellers: 'Cartoonishly joyful'
+							});
 							fireEvent.click( screen.getByRole( 'button' ) );
-							expect( setSpy ).toHaveBeenCalledTimes( 1 );
-							expect( setSpy.mock.calls[ 0 ][ 0 ] ).toEqual({});
-							setSpy.mockRestore();
-							connectSpy.mockRestore();
-						} );
+							await wait(() => {});
+							expect( screen.getByTestId( 'data-output' ).textContent ).toBe( origTextContent );
+							expect( ObservableContext.store.getState() ).toBe( alteredState );						} );
 					} );
 				} );
 			} );
