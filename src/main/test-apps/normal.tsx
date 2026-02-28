@@ -227,12 +227,10 @@ PriceSticker.displayName = 'PriceSticker';
 export const Product : React.FC<{
 	prehooks?: Prehooks, type : string
 }> = ({ prehooks = undefined, type }) => {
-	useEffect(() => { ObservableContext.prehooks = prehooks! }, [ prehooks ]);
 	useEffect(() => {
-
-		// @debug
-		console.info( 'OBSERVABLE CONTEXT >>>> ', ObservableContext );
-		
+		ObservableContext.prehooks = prehooks!;
+	}, [ prehooks ]);
+	useEffect(() => {
 		ObservableContext.store.setState({ type });
 	}, [ type ]);
 	const overridePricing = useCallback(

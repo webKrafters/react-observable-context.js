@@ -475,9 +475,7 @@ describe( 'ReactObservableContext', () => {
 				});
 		});
 		afterEach(() => { TestObservableCtx.dispose() })
-		// @debug
-		test( '1wwww', async () => {
-		// test( 'is successful', async () => {
+		test( 'is successful', async () => {
 			render( <Client /> );
 			await wait(() => {});
 			expect( screen.getByTestId( 'data-output' ).textContent ).toEqual(
@@ -740,15 +738,9 @@ describe( 'ReactObservableContext', () => {
 					expect( prehooks.setState ).toHaveBeenCalledTimes( 1 );
 					expect( prehooks.setState ).toHaveBeenCalledWith({ type: 'Bag' });
 				} );
-				// @debug
-				test( '1xxxx', async () => {
-				// test( 'completes `store.setState` method call if `setState` prehook returns TRUTHY', async () => {
+				test( 'completes `store.setState` method call if `setState` prehook returns TRUTHY', async () => {
 					const { renderCount } : PerfValue = perf( React );
 					const prehooks = Object.freeze({ setState: jest.fn().mockReturnValue( true ) });
-					
-					// @debug
-					console.info( '<<<<<<<+++++++ STARTING A NEW PRODUCT ++++++++>>>>> ' );
-
 					render( <Product prehooks={ prehooks } type="Computer" /> );
 					let baseRenderCount : Record<string,any>;
 					await wait(() => { baseRenderCount = transformRenderCount( renderCount ) });
@@ -1034,9 +1026,7 @@ describe( 'ReactObservableContext', () => {
 						} );
 					} );
 				} );
-				// @debug
-				test( '1wwww', async () => {
-				// test( 'updates internal state', async () => {
+				test( 'updates internal state', async () => {
 					const { renderCount } : PerfValue = perf( React );
 					const testSelectors = [ 'color', 'customer.name.last', 'price' ];
 					const TestObsCtx = createContext( defaultState as Partial<TestState> );
