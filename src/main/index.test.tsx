@@ -2,6 +2,7 @@ import { AccessorResponse } from '@webkrafters/auto-immutable';
 
 import {
 	FULL_STATE_SELECTOR,
+	Prehooks,
 	type ConnectedComponent,
 	type ConnectProps,
 	type ExtractInjectedProps,
@@ -41,12 +42,8 @@ import * as AutoImmutableModule from '@webkrafters/auto-immutable';
 import clonedeep from '@webkrafters/clone-total';
 
 import {
-	// connect,
 	createContext,
-	// mkReadonly,
-	ObservableContext as ObservableContextType,
-	// UsageError,
-	// useContext
+	ObservableContext as ObservableContextType
 } from '.';
 
 import { isReadonly } from '../test-artifacts/utils';
@@ -57,26 +54,13 @@ import createSourceData, {
 
 import AppNormal, {
 	defaultState,
-	ObservableContext,
-	Product,
-	TallyDisplay,
-	useStream,
+	createClientComponents,
 	TestState
 } from './test-apps/normal';
 import AppWithConnectedChildren from './test-apps/with-connected-children';
 import AppWithPureChildren from './test-apps/with-pure-children';
-import { EagleEyeContext, Prehooks } from '@webkrafters/eagleeye';
-
-// import {
-// 	DELETE_TAG,
-// 	FULL_STATE_SELECTOR,
-// 	MOVE_TAG,
-// 	REPLACE_TAG
-// } from '../constants';
 
 type PerfValue = PerfTools<DefaultPerfToolsField>;
-
-const { default: AutoImmutable } = AutoImmutableModule;
 
 beforeAll(() => {
 	jest.spyOn( console, 'log' ).mockImplementation(() => {});
@@ -556,7 +540,7 @@ describe( 'ReactObservableContext', () => {
 			TestObservableCtx.store.resetState([ FULL_STATE_SELECTOR ]);
 			expect( TestObservableCtx.store.getState() ).toStrictEqual( sourceData );
 		});
-		test( 'will reset state when ' + FULL_STATE_SELECTOR + ' APPEARS IN THE LIST OF TARGETED RESET PATHS', async () => {
+		test( 'will reset state whenever ' + FULL_STATE_SELECTOR + ' appears in the list of target reset paths', async () => {
 			
 			render( <Client /> );
 			await wait(() => {});
@@ -596,6 +580,17 @@ describe( 'ReactObservableContext', () => {
 		})
 	} );
 	describe( 'prehooks', () => {
+		let ObservableContext : ObservableContextType<Partial<TestState>>;
+		let Product : React.FC<{
+			prehooks?: Prehooks;
+			type: string;
+		}>;
+		beforeEach(() => {
+			ObservableContext = createContext( defaultState as Partial<TestState> );
+			const client = createClientComponents( ObservableContext );
+			Product = client.Product;
+		});
+		afterAll(() => { ObservableContext.dispose() });
 		describe( 'resetState prehook', () => {
 			describe( 'when `resetState` prehook does not exist on the context', () => {
 				test( 'completes `store.resetState` method call', async () => {
@@ -620,7 +615,10 @@ describe( 'ReactObservableContext', () => {
 				} );
 			} );
 			describe( 'when `resetState` prehook exists on the context', () => {
-				test( 'is called by the `store.resetState` method', async () => {
+				// @debug
+				test( '1QQQQ', () => {
+				// test( 'is called by the `store.resetState` method', async () => {
+					
 					const prehooks = Object.freeze({ resetState: jest.fn().mockReturnValue( false ) });
 					render( <Product prehooks={ prehooks } type="Computer" /> );
 					fireEvent.change( screen.getByLabelText( 'New Type:' ), { target: { value: 'Bag' } } );
@@ -630,7 +628,7 @@ describe( 'ReactObservableContext', () => {
 					prehooks.resetState.mockClear();
 					fireEvent.click( screen.getByRole( 'button', { name: 'reset context' } ) );
 					expect( prehooks.resetState ).toHaveBeenCalledTimes( 1 );
-					expect( prehooks.resetState ).toHaveBeenCalledWith({
+					expect( prehooks.resetState.mock.calls[ 0 ][ 0 ]).toEqual({
 						[ AutoImmutableModule.REPLACE_TAG ]: {
 							// data slices from original state to reset current state slices
 							color: 'Burgundy',
@@ -641,7 +639,8 @@ describe( 'ReactObservableContext', () => {
 							price: 22.5,
 							type: ''
 						}
-					}, {
+					});
+					expect( prehooks.resetState.mock.calls[ 0 ][ 1 ]).toEqual({
 						// current: context state value after the `update type` & `update color` button clicks
 						current: {
 							color: 'Teal',
@@ -756,7 +755,6 @@ describe( 'ReactObservableContext', () => {
 						expect( netCount.TallyDisplay ).toBe( 1 ); // DULY UPDATED WITH NEW STATE CHANGE
 					});
 					cleanupPerfTest();
-					ObservableContext.prehooks = undefined as unknown as Prehooks<Partial<TestState>>;
 				}, 3e4 );
 				test( 'aborts `store.setState` method call if `setState` prehook returns FALSY', async () => {
 					const { renderCount } : PerfValue = perf( React );
@@ -925,6 +923,11 @@ describe( 'ReactObservableContext', () => {
 			} );
 		} );
 		describe( 'createContext(...)', () => {
+			let ObservableContext : ObservableContextType<Partial<TestState>>;
+			beforeEach(() => {
+				ObservableContext = createContext( defaultState as Partial<TestState> );
+			});
+			afterEach(() => { ObservableContext.dispose() });
 			test( 'returns observable context instance', () => {
 				expect( ObservableContext ).toBeInstanceOf( ObservableContextType );
 			} );
@@ -941,15 +944,12 @@ describe( 'ReactObservableContext', () => {
 				} );
 				describe( 'accessing the state', () => {
 					test( 'returns entire copy of the current state by default', () => {
-						const ctx = createContext( defaultState );
-						const currentState = ctx.store.getState();
+						const currentState = ObservableContext.store.getState();
 						expect( currentState ).not.toBe( defaultState );
 						expect( currentState ).toStrictEqual( defaultState );
-						ctx.dispose();
 					} );
 					test( 'returns only copy of the state targeted by property paths', () => {
-						const ctx = createContext( defaultState );
-						expect( ctx.store.getState([
+						expect( ObservableContext.store.getState([
 							'customer.name.last',
 							'type',
 							'customer.phone'
@@ -962,7 +962,6 @@ describe( 'ReactObservableContext', () => {
 							},
 							type: ''
 						});
-						ctx.dispose();
 					} );
 					describe( 'when unchanged, guarantees data consistency by ensuring that...', () => {
 						function areExact( a : any, b : any ) {
@@ -981,7 +980,11 @@ describe( 'ReactObservableContext', () => {
 							) ).toBe( true );
 						} );
 						test( 'same values at property paths are returned when using property paths', () => {
-							const pPaths = [ 'customer.name.last', 'type', 'customer.phone' ];
+							const pPaths = [
+								'customer.name.last',
+								'type',
+								'customer.phone'
+							];
 							const s1 = ObservableContext.store.getState( pPaths );
 							const s2 = ObservableContext.store.getState( pPaths );
 							for( const path of pPaths ) {
@@ -992,10 +995,14 @@ describe( 'ReactObservableContext', () => {
 							}
 						} );
 						test( 'same entire state is returned if ' + FULL_STATE_SELECTOR + ' found in property paths used', () => {
-							const pPaths = [ 'customer.name.last', 'type', FULL_STATE_SELECTOR, 'customer.phone' ];
 							expect( areExact(
 								ObservableContext.store.getState(),
-								ObservableContext.store.getState()
+								ObservableContext.store.getState([
+									'customer.name.last',
+									'type',
+									FULL_STATE_SELECTOR,
+									'customer.phone'
+								])
 							) ).toBe( true );
 						} );
 					} );
@@ -1028,47 +1035,49 @@ describe( 'ReactObservableContext', () => {
 				} );
 				test( 'updates internal state', async () => {
 					const { renderCount } : PerfValue = perf( React );
-					const testSelectors = [ 'color', 'customer.name.last', 'price' ];
-					const TestObsCtx = createContext( defaultState as Partial<TestState> );
+					const testSelectors = [
+						'color',
+						'customer.name.last',
+						'price'
+					];
 					const TestClient : React.FC<{ data : {} }> = ({ data }) => (
 						<div data-testid="data-output">
 							{ JSON.stringify( data ) }
 						</div>
 					);
 					TestClient.displayName = 'TestClient';
-					const ConnectedTestClient = TestObsCtx.connect( testSelectors )( TestClient );
+					const ConnectedTestClient = ObservableContext.connect( testSelectors )( TestClient );
 					render( <ConnectedTestClient /> );
 					await wait(() => {});
 					expect( ( renderCount.current.TestClient as RenderCountField ).value ).toBe( 1 );
-					const currentState = TestObsCtx.store.getState();
-					TestObsCtx.store.setState({ price: 45 });
+					const currentState = ObservableContext.store.getState();
+					ObservableContext.store.setState({ price: 45 });
 					let newState = { ...defaultState, price: 45 };
 					await wait(() => {});
 					expect( ( renderCount.current.TestClient as RenderCountField ).value ).toBe( 2 );
 					expect( currentState ).not.toEqual( newState );
-					expect( TestObsCtx.store.getState() ).toEqual( newState );
-					TestObsCtx.store.resetState([ FULL_STATE_SELECTOR ]); // resets store internal state
+					expect( ObservableContext.store.getState() ).toEqual( newState );
+					ObservableContext.store.resetState([ FULL_STATE_SELECTOR ]); // resets store internal state
 					await wait(() => {});
 					expect( ( renderCount.current.TestClient as RenderCountField ).value ).toBe( 3 );
-					let currentState2 = TestObsCtx.store.getState();
+					let currentState2 = ObservableContext.store.getState();
 					expect( currentState2 ).toStrictEqual( defaultState );
 					expect( currentState2 ).toStrictEqual( currentState );
-					TestObsCtx.store.setState({ price: 300 });
-					currentState2 = TestObsCtx.store.getState();
+					ObservableContext.store.setState({ price: 300 });
+					currentState2 = ObservableContext.store.getState();
 					await wait(() => {});
 					newState = { ...defaultState, price: 300 };
 					expect( currentState2 ).toEqual( newState );
 					expect( currentState2 ).not.toEqual( defaultState );
 					expect( ( renderCount.current.TestClient as RenderCountField ).value ).toBe( 4 );
 					// parameterless external invocation of resetState is a noop
-					TestObsCtx.store.resetState();
-					const currentState3 = TestObsCtx.store.getState();
+					ObservableContext.store.resetState();
+					const currentState3 = ObservableContext.store.getState();
 					await wait(() => {});
 					expect( ( renderCount.current.TestClient as RenderCountField ).value ).toBe( 4 );
 					expect( newState ).toEqual( currentState3 );
 					expect( defaultState ).not.toEqual( currentState3 );
 					expect( currentState2 ).toBe( currentState3 );
-					TestObsCtx.dispose();
 					cleanupPerfTest();
 				}, 3e4 );
 				test( 'subscribes to state changes', async () => {
@@ -1078,8 +1087,7 @@ describe( 'ReactObservableContext', () => {
 							phone: '555-5000'
 						}
 					};
-					const TestObsCtx = createContext( defaultState as Partial<TestState> );
-					const useTestStream = TestObsCtx.useStream;
+					const useTestStream = ObservableContext.useStream;
 					const TestClient = () => {
 						const { data, resetState, setState } = useTestStream([ FULL_STATE_SELECTOR ]);
 						const doReset = useCallback(() => {
@@ -1102,7 +1110,7 @@ describe( 'ReactObservableContext', () => {
 					}
 					render( <TestClient /> );
 					const onChangeMock = jest.fn();
-					const unsub = TestObsCtx.store.subscribe( 'data-updated', onChangeMock );
+					const unsub = ObservableContext.store.subscribe( 'data-updated', onChangeMock );
 					expect( onChangeMock ).not.toHaveBeenCalled();
 					fireEvent.click( screen.getByRole( 'button' ) ); // triggers setState
 					await wait(() => {});
@@ -1156,7 +1164,6 @@ describe( 'ReactObservableContext', () => {
 						screen.getByTestId( 'data-output' ).textContent
 					);
 					expect( onChangeMock ).not.toHaveBeenCalled();
-					TestObsCtx.dispose();
 				} );
 			} );
 		} );
