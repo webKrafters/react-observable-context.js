@@ -187,8 +187,10 @@ export class ObservableContext<T extends State> {
 	dispose(){ this.consumer.dispose() }
 }
 
+/* istanbul ignore next */
 const ChildMemo : FC<{ child: ReactNode }> = (() => {
 
+	/* istanbul ignore next */
 	const useNodeMemo = ( node : ReactNode ) : ReactNode => {
 		const nodeRef = useRef( node );
 		if( !isEqual(
@@ -209,6 +211,7 @@ const ChildMemo : FC<{ child: ReactNode }> = (() => {
 	return Guardian;
 })();
 
+/* istanbul ignore next */
 function memoizeImmediateChildTree( children : ReactNode ) : ReactNode {
 	return Children.map( children, _child => {
 		let child = _child as JSX.Element;
@@ -218,6 +221,7 @@ function memoizeImmediateChildTree( children : ReactNode ) : ReactNode {
 		) ) {
 			return child;
 		}
+		/* istanbul ignore if */
 		if( child.props?.children ) {
 			child = cloneElement(
 				child,

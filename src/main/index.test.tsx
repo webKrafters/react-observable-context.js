@@ -2,6 +2,7 @@ import { AccessorResponse } from '@webkrafters/auto-immutable';
 
 import {
 	FULL_STATE_SELECTOR,
+	IStorage,
 	Prehooks,
 	type ConnectedComponent,
 	type ConnectProps,
@@ -92,9 +93,7 @@ describe( 'ReactObservableContext', () => {
 					AppWithConnectedChildren = client.App;
 				});
 				afterAll(() => { ObservableContext.dispose() });
-				// @debug
-				test( '1xxxx', async () => {
-				// test( 'scenario 1', async () => {
+				test( 'scenario 1', async () => {
 					const { renderCount } : PerfValue = perf( React );
 					render( <AppWithConnectedChildren /> );
 					let baseRenderCount : Record<string,any>;
@@ -104,14 +103,15 @@ describe( 'ReactObservableContext', () => {
 					await wait(() => {
 						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
 							App: 0,
-							Product: 0,
-							Editor: 0,
-							TallyDisplay: 1,
-							CustomerPhoneDisplay: 0,
 							CapitalizedDisplay: 0,
-							Reset: 1,
+							CustomerPhoneDisplay: 0,
+							Editor: 0,
+							'ObservableContext.Connected': 0,
+							PriceSticker: 1,
+							Product: 0,
 							ProductDescription: 0,
-							PriceSticker: 1
+							Reset: 0,
+							TallyDisplay: 1
 						});
 					});
 					cleanupPerfTest();
@@ -124,13 +124,18 @@ describe( 'ReactObservableContext', () => {
 					fireEvent.change( screen.getByLabelText( 'New Color:' ), { target: { value: 'Navy' } } );
 					fireEvent.click( screen.getByRole( 'button', { name: 'update color' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 0 ); // unaffected: no use for product color data
-						expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product color data
-						expect( netCount.PriceSticker ).toBe( 0 ); // unaffected: no use for product color data
-						expect( netCount.ProductDescription ).toBe( 1 );
-						expect( netCount.Reset ).toBe( 0 ); // unaffected: no use for product color data
-						expect( netCount.TallyDisplay ).toBe( 1 );
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							App: 0,
+							CapitalizedDisplay: 0,
+							CustomerPhoneDisplay: 0,
+							Editor: 0,
+							'ObservableContext.Connected': 0,
+							PriceSticker: 0,
+							Product: 0,
+							ProductDescription: 1,
+							Reset: 0,
+							TallyDisplay: 1
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -144,14 +149,15 @@ describe( 'ReactObservableContext', () => {
 					await wait(() => {
 						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
 							App: 0,
-							Product: 0,
-							Editor: 0,
-							TallyDisplay: 1,
-							CustomerPhoneDisplay: 0,
 							CapitalizedDisplay: 0,
-							Reset: 1,
+							CustomerPhoneDisplay: 0,
+							Editor: 0,
+							'ObservableContext.Connected': 0,
+							PriceSticker: 0,
+							Product: 0,
 							ProductDescription: 1,
-							PriceSticker: 0
+							Reset: 0,
+							TallyDisplay: 1
 						});
 					});
 					cleanupPerfTest();
@@ -166,13 +172,18 @@ describe( 'ReactObservableContext', () => {
 					fireEvent.change( screen.getByLabelText( 'New Type:' ), { target: { value: 'Bag' } } );
 					fireEvent.click( screen.getByRole( 'button', { name: 'update type' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 0 ); // unaffected: no new product type data
-						expect( netCount.Editor ).toBe( 0 ); // unaffected: no new product type data
-						expect( netCount.PriceSticker ).toBe( 0 ); // unaffected: no new product type data
-						expect( netCount.ProductDescription ).toBe( 0 ); // unaffected: no new product type data
-						expect( netCount.Reset ).toBe( 0 ); // unaffected: no new product type data
-						expect( netCount.TallyDisplay ).toBe( 0 ); // unaffected: no new product type data
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							App: 0,
+							CapitalizedDisplay: 0,
+							CustomerPhoneDisplay: 0,
+							Editor: 0,
+							'ObservableContext.Connected': 0,
+							PriceSticker: 0,
+							Product: 0,
+							ProductDescription: 0,
+							Reset: 0,
+							TallyDisplay: 0
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -194,13 +205,17 @@ describe( 'ReactObservableContext', () => {
 					fireEvent.change( screen.getByLabelText( 'New Price:' ), { target: { value: '123' } } );
 					fireEvent.click( screen.getByRole( 'button', { name: 'update price' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 0 ); // unaffected: no use for price data
-						expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for price data
-						expect( netCount.PriceSticker ).toBe( 1 );
-						expect( netCount.ProductDescription ).toBe( 0 ); // unaffected: no use for price data
-						expect( netCount.Reset ).toBe( 0 ); // unaffected: no use for price data
-						expect( netCount.TallyDisplay ).toBe( 1 );
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							App: 0,
+							CapitalizedDisplay: 0,
+							CustomerPhoneDisplay: 0,
+							Editor: 0,
+							PriceSticker: 1,
+							Product: 0,
+							ProductDescription: 0,
+							Reset: 0,
+							TallyDisplay: 1
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -212,13 +227,17 @@ describe( 'ReactObservableContext', () => {
 					fireEvent.change( screen.getByLabelText( 'New Color:' ), { target: { value: 'Navy' } } );
 					fireEvent.click( screen.getByRole( 'button', { name: 'update color' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 0 ); // unaffected: no use for product color data
-						expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product color data
-						expect( netCount.PriceSticker ).toBe( 0 ); // unaffected: no use for product color data
-						expect( netCount.ProductDescription ).toBe( 1 );
-						expect( netCount.Reset ).toBe( 0 ); // unaffected: no use for product color data
-						expect( netCount.TallyDisplay ).toBe( 1 );
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							App: 0,
+							CapitalizedDisplay: 0,
+							CustomerPhoneDisplay: 0,
+							Editor: 0,
+							PriceSticker: 0,
+							Product: 0,
+							ProductDescription: 1,
+							Reset: 0,
+							TallyDisplay: 1
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -230,13 +249,17 @@ describe( 'ReactObservableContext', () => {
 					fireEvent.change( screen.getByLabelText( 'New Type:' ), { target: { value: 'Bag' } } );
 					fireEvent.click( screen.getByRole( 'button', { name: 'update type' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.PriceSticker ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.ProductDescription ).toBe( 1 );
-						expect( netCount.Reset ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.TallyDisplay ).toBe( 1 );
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							App: 0,
+							CapitalizedDisplay: 0,
+							CustomerPhoneDisplay: 0,
+							Editor: 0,
+							PriceSticker: 0,
+							Product: 0,
+							ProductDescription: 1,
+							Reset: 0,
+							TallyDisplay: 1
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -250,13 +273,17 @@ describe( 'ReactObservableContext', () => {
 					fireEvent.change( screen.getByLabelText( 'New Type:' ), { target: { value: 'Bag' } } );
 					fireEvent.click( screen.getByRole( 'button', { name: 'update type' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 0 );
-						expect( netCount.Editor ).toBe( 0 );
-						expect( netCount.PriceSticker ).toBe( 0 );
-						expect( netCount.ProductDescription ).toBe( 0 ); // unaffected: no new product type data
-						expect( netCount.Reset ).toBe( 0 );
-						expect( netCount.TallyDisplay ).toBe( 0 ); // unaffected: no new product type data
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							App: 0,
+							CapitalizedDisplay: 0,
+							CustomerPhoneDisplay: 0,
+							Editor: 0,
+							PriceSticker: 0,
+							Product: 0,
+							ProductDescription: 0,
+							Reset: 0,
+							TallyDisplay: 0
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -278,13 +305,17 @@ describe( 'ReactObservableContext', () => {
 					fireEvent.change( screen.getByLabelText( 'New Price:' ), { target: { value: '123' } } );
 					fireEvent.click( screen.getByRole( 'button', { name: 'update price' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-						expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product price data
-						expect( netCount.PriceSticker ).toBe( 1 );
-						expect( netCount.ProductDescription ).toBe( 0 ); // unaffected: no use for product price data
-						expect( netCount.Reset ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-						expect( netCount.TallyDisplay ).toBe( 1 );
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							App: 0,
+							CapitalizedDisplay: 0,
+							CustomerPhoneDisplay: 1,
+							Editor: 0,
+							PriceSticker: 1,
+							Product: 0,
+							ProductDescription: 0,
+							Reset: 1,
+							TallyDisplay: 1
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -296,13 +327,17 @@ describe( 'ReactObservableContext', () => {
 					fireEvent.change( screen.getByLabelText( 'New Color:' ), { target: { value: 'Navy' } } );
 					fireEvent.click( screen.getByRole( 'button', { name: 'update color' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-						expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product price data
-						expect( netCount.PriceSticker ).toBe( 0 ); // unaffected: no use for product price data
-						expect( netCount.ProductDescription ).toBe( 1 );
-						expect( netCount.Reset ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-						expect( netCount.TallyDisplay ).toBe( 1 );
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							App: 0,
+							CapitalizedDisplay: 0,
+							CustomerPhoneDisplay: 1,
+							Editor: 0,
+							PriceSticker: 0,
+							Product: 0,
+							ProductDescription: 1,
+							Reset: 1,
+							TallyDisplay: 1
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -314,13 +349,17 @@ describe( 'ReactObservableContext', () => {
 					fireEvent.change( screen.getByLabelText( 'New Type:' ), { target: { value: 'Bag' } } );
 					fireEvent.click( screen.getByRole( 'button', { name: 'update type' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-						expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.PriceSticker ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.ProductDescription ).toBe( 1 );
-						expect( netCount.Reset ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-						expect( netCount.TallyDisplay ).toBe( 1 );
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							App: 0,
+							CapitalizedDisplay: 0,
+							CustomerPhoneDisplay: 1,
+							Editor: 0,
+							PriceSticker: 0,
+							Product: 0,
+							ProductDescription: 1,
+							Reset: 1,
+							TallyDisplay: 1
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -334,13 +373,17 @@ describe( 'ReactObservableContext', () => {
 					fireEvent.change( screen.getByLabelText( 'New Type:' ), { target: { value: 'Bag' } } );
 					fireEvent.click( screen.getByRole( 'button', { name: 'update type' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 0 );
-						expect( netCount.Editor ).toBe( 0 );
-						expect( netCount.PriceSticker ).toBe( 0 );
-						expect( netCount.ProductDescription ).toBe( 0 ); // unaffected: no new product type data
-						expect( netCount.Reset ).toBe( 0 );
-						expect( netCount.TallyDisplay ).toBe( 0 ); // unaffected: no new product type data
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							App: 0,
+							CapitalizedDisplay: 0,
+							CustomerPhoneDisplay: 0,
+							Editor: 0,
+							PriceSticker: 0,
+							Product: 0,
+							ProductDescription: 0,
+							Reset: 0,
+							TallyDisplay: 0
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -363,13 +406,18 @@ describe( 'ReactObservableContext', () => {
 				await wait(() => { baseRenderCount = transformRenderCount( renderCount ); });
 				fireEvent.keyUp( screen.getByLabelText( 'Type:' ), { target: { value: 'A' } } );
 				await wait(() => {
-					const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-					expect( netCount.CustomerPhoneDisplay ).toBe( 0 ); // unaffected: no use for product type data
-					expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product type data
-					expect( netCount.PriceSticker ).toBe( 0 ); // unaffected: no use for product type data
-					expect( netCount.ProductDescription ).toBe( 1 );
-					expect( netCount.Reset ).toBe( 0 ); // unaffected: no use for product type data
-					expect( netCount.TallyDisplay ).toBe( 1 );
+					expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+						App: 1,
+						CapitalizedDisplay: 0,
+						CustomerPhoneDisplay: 0,
+						Editor: 0,
+						'ObservableContext.Connected': 0,
+						PriceSticker: 0,
+						Product: 1,
+						ProductDescription: 1,
+						Reset: 0,
+						TallyDisplay: 1
+					});
 				});
 				cleanupPerfTest();
 			} );
@@ -383,13 +431,18 @@ describe( 'ReactObservableContext', () => {
 					code: 'Key5'
 				} as SelectorMatcherOptions ) );
 				await wait(() => {
-					const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-					expect( netCount.CustomerPhoneDisplay ).toBe( 0 ); // unaffected: no use for product price data
-					expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product price data
-					expect( netCount.PriceSticker ).toBe( 1 );
-					expect( netCount.ProductDescription ).toBe( 0 ); // unaffected: no use for product price data
-					expect( netCount.Reset ).toBe( 0 ); // unaffected: no use for product price data
-					expect( netCount.TallyDisplay ).toBe( 1 );
+					expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({				
+						App: 0,
+						CapitalizedDisplay: 0,
+						CustomerPhoneDisplay: 0,
+						Editor: 0,
+						'ObservableContext.Connected': 0,
+						PriceSticker: 1,
+						Product: 0,
+						ProductDescription: 0,
+						Reset: 0,
+						TallyDisplay: 1
+					});
 				});
 				cleanupPerfTest();
 			} );
@@ -410,13 +463,17 @@ describe( 'ReactObservableContext', () => {
 				await wait(() => { baseRenderCount = transformRenderCount( renderCount ); });
 				fireEvent.keyUp( screen.getByLabelText( 'Type:' ), { target: { value: 'A' } } );
 				await wait(() => {
-					const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-					expect( netCount.CustomerPhoneDisplay ).toBe( 0 ); // unaffected: no use for product type data
-					expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product type data
-					expect( netCount.PriceSticker ).toBe( 0 ); // unaffected: no use for product type data
-					expect( netCount.ProductDescription ).toBe( 1 );
-					expect( netCount.Reset ).toBe( 0 ); // unaffected: no use for product type data
-					expect( netCount.TallyDisplay ).toBe( 1 );
+					expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+						App: 1,
+						CapitalizedDisplay: 0,
+						CustomerPhoneDisplay: 0,
+						Editor: 0,
+						PriceSticker: 0,
+						Product: 1,
+						ProductDescription: 1,
+						Reset: 0,
+						TallyDisplay: 1
+					});
 				});
 				cleanupPerfTest();
 			} );
@@ -427,13 +484,17 @@ describe( 'ReactObservableContext', () => {
 				await wait(() => { baseRenderCount = transformRenderCount( renderCount ); });
 				fireEvent.keyUp( screen.getByLabelText( '$', { key: '5', code: 'Key5' } as SelectorMatcherOptions ) );
 				await wait(() => {
-					const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-					expect( netCount.CustomerPhoneDisplay ).toBe( 0 ); // unaffected: no use for product price data
-					expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product price data
-					expect( netCount.PriceSticker ).toBe( 1 );
-					expect( netCount.ProductDescription ).toBe( 0 ); // unaffected: no use for product price data
-					expect( netCount.Reset ).toBe( 0 ); // unaffected: no use for product price data
-					expect( netCount.TallyDisplay ).toBe( 1 );
+					expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+						App: 0,
+						CapitalizedDisplay: 0,
+						CustomerPhoneDisplay: 0,
+						Editor: 0,
+						PriceSticker: 1,
+						Product: 0,
+						ProductDescription: 0,
+						Reset: 0,
+						TallyDisplay: 1
+					});
 				});
 				cleanupPerfTest();
 			} );
@@ -475,13 +536,17 @@ describe( 'ReactObservableContext', () => {
 				await wait(() => { baseRenderCount = transformRenderCount( renderCount ); });
 				fireEvent.keyUp( screen.getByLabelText( '$', { key: '5', code: 'Key5' } as SelectorMatcherOptions ) );
 				await wait(() => {
-					const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-					expect( netCount.CustomerPhoneDisplay ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-					expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product price data
-					expect( netCount.PriceSticker ).toBe( 1 );
-					expect( netCount.ProductDescription ).toBe( 0 ); // unaffected: no use for product price data
-					expect( netCount.Reset ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-					expect( netCount.TallyDisplay ).toBe( 1 );
+					expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+						App: 0,
+						CapitalizedDisplay: 0,
+						CustomerPhoneDisplay: 1,
+						Editor: 0,
+						PriceSticker: 1,
+						Product: 0,
+						ProductDescription: 0,
+						Reset: 1,
+						TallyDisplay: 1
+					});
 				});
 				cleanupPerfTest();
 			} );
@@ -660,13 +725,16 @@ describe( 'ReactObservableContext', () => {
 					await wait(() => { baseRenderCount = transformRenderCount( renderCount ) });
 					fireEvent.click( screen.getByRole( 'button', { name: 'reset context' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-						expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.PriceSticker ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.ProductDescription ).toBe( 1 ); // DULY UPDATED WITH NEW STATE RESET
-						expect( netCount.Reset ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-						expect( netCount.TallyDisplay ).toBe( 1 ); // DULY UPDATED WITH NEW STATE RESET
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							CapitalizedDisplay: 0,
+							CustomerPhoneDisplay: 1,
+							Editor: 0,
+							PriceSticker: 0,
+							Product: 0,
+							ProductDescription: 1,
+							Reset: 1,
+							TallyDisplay: 1
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -727,13 +795,16 @@ describe( 'ReactObservableContext', () => {
 					await wait(() => { baseRenderCount = transformRenderCount( renderCount ) });
 					fireEvent.click( screen.getByRole( 'button', { name: 'reset context' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-						expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.PriceSticker ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.ProductDescription ).toBe( 1 ); // DULY UPDATED WITH NEW STATE RESET
-						expect( netCount.Reset ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-						expect( netCount.TallyDisplay ).toBe( 1 ); // DULY UPDATED WITH NEW STATE RESET
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							CapitalizedDisplay: 0,
+							CustomerPhoneDisplay: 1,
+							Editor: 0,
+							PriceSticker: 0,
+							Product: 0,
+							ProductDescription: 1,
+							Reset: 1,
+							TallyDisplay: 1
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -747,13 +818,16 @@ describe( 'ReactObservableContext', () => {
 					await wait(() => { baseRenderCount = transformRenderCount( renderCount ) });
 					fireEvent.click( screen.getByRole( 'button', { name: 'reset context' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.PriceSticker ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.ProductDescription ).toBe( 0 ); // NORMAL UPDATE DUE CANCELED: RESET STATE ABORTED
-						expect( netCount.Reset ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.TallyDisplay ).toBe( 0 ); // NORMAL UPDATE DUE CANCELED: RESET STATE ABORTED
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							CapitalizedDisplay: 0,
+							CustomerPhoneDisplay: 0,
+							Editor: 0,
+							PriceSticker: 0,
+							Product: 0,
+							ProductDescription: 0,
+							Reset: 0,
+							TallyDisplay: 0
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -770,13 +844,16 @@ describe( 'ReactObservableContext', () => {
 					fireEvent.change( screen.getByLabelText( 'New Type:' ), { target: { value: 'Bag' } } );
 					fireEvent.click( screen.getByRole( 'button', { name: 'update type' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-						expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.PriceSticker ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.ProductDescription ).toBe( 1 ); // DULY UPDATED WITH NEW STATE CHANGE
-						expect( netCount.Reset ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-						expect( netCount.TallyDisplay ).toBe( 1 ); // DULY UPDATED WITH NEW STATE CHANGE
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							CapitalizedDisplay: 0,
+							CustomerPhoneDisplay: 1,
+							Editor: 0,
+							PriceSticker: 0,
+							Product: 0,
+							ProductDescription: 1,
+							Reset: 1,
+							TallyDisplay: 1
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -800,13 +877,16 @@ describe( 'ReactObservableContext', () => {
 					fireEvent.change( screen.getByLabelText( 'New Type:' ), { target: { value: 'Bag' } } );
 					fireEvent.click( screen.getByRole( 'button', { name: 'update type' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-						expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.PriceSticker ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.ProductDescription ).toBe( 1 ); // DULY UPDATED WITH NEW STATE CHANGE
-						expect( netCount.Reset ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-						expect( netCount.TallyDisplay ).toBe( 1 ); // DULY UPDATED WITH NEW STATE CHANGE
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							CapitalizedDisplay: 0,
+							CustomerPhoneDisplay: 1,
+							Editor: 0,
+							PriceSticker: 0,
+							Product: 0,
+							ProductDescription: 1,
+							Reset: 1,
+							TallyDisplay: 1,
+						});
 					});
 					cleanupPerfTest();
 				}, 3e4 );
@@ -819,13 +899,16 @@ describe( 'ReactObservableContext', () => {
 					fireEvent.change( screen.getByLabelText( 'New Type:' ), { target: { value: 'Bag' } } );
 					fireEvent.click( screen.getByRole( 'button', { name: 'update type' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.PriceSticker ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.ProductDescription ).toBe( 0 ); // NORMAL UPDATE DUE CANCELED: SET STATE ABORTED
-						expect( netCount.Reset ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.TallyDisplay ).toBe( 0 ); // NORMAL UPDATE DUE CANCELED: SET STATE ABORTED
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							CapitalizedDisplay: 0,
+							CustomerPhoneDisplay: 0,
+							Editor: 0,
+							PriceSticker: 0,
+							Product: 0,
+							ProductDescription: 0,
+							Reset: 0,
+    						TallyDisplay: 0,
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -1751,6 +1834,67 @@ describe( 'ReactObservableContext', () => {
 							expect( ObservableContext.store.getState() ).toBe( alteredState );						} );
 					} );
 				} );
+			} );
+		} );
+		describe( 'dispose(...)', () => {
+			test( 'manually releases memory before exiting', () => {
+				const ctx = createContext( defaultState );
+				expect( ctx.closed ).toBe( false );
+				const Client = ctx.connect({
+					cp: 'customer.phone',
+					p: 'price',
+					t: 'type'
+				})(({ data }) => (
+					<div data-testId="data-output">
+						{ JSON.stringify( data ) }
+					</div>
+				));
+				render( <Client /> );
+				expect( ctx.store.getState() ).toEqual( defaultState );
+				const dataDisplay = screen.getByTestId( 'data-output' ).textContent;
+				expect( dataDisplay ).toEqual(JSON.stringify({ cp: null, p: 22.5, t: '' }));
+				ctx.dispose();
+				// can no longer obtain new data
+				expect( ctx.store.getState() ).toBeUndefined();
+				// component stream data is frozen at the time of disposal
+				expect( screen.getByTestId( 'data-output' ).textContent ).toBe( dataDisplay );
+			});
+		})
+		describe( 'properties', () => {
+			let ctx : ObservableContextType<TestState>;
+			beforeAll(() => { ctx = createContext() });
+			afterAll(() => { ctx.dispose() });
+			test( 'receives and furnishes prehooks', () => {
+				const prehooks = {
+					resetState: jest.fn(),
+					setState: jest.fn()
+				} as unknown as Prehooks<TestState>;
+				ctx.prehooks = prehooks;
+				expect( ctx.prehooks ).toBe( prehooks );
+				ctx.prehooks = undefined as unknown as Prehooks<TestState>;
+			} );
+			test( 'receives and furnishes init data storage', () => {
+				const storage = {
+					getItem: jest.fn(),
+					removeItem: jest.fn(),
+					setItem: jest.fn()
+				} as unknown as IStorage<TestState>;
+				ctx.storage = storage;
+				expect( ctx.storage ).toBe( storage );
+				ctx.storage = undefined as unknown as IStorage<TestState>;
+			} );
+			// @todo
+			test( 'furnishes external store reference: readonly', () => {
+			} );
+			// @todo
+			test( 'furnishes useStream hook: readonly', () => {
+				const prehooks = {
+					resetState: jest.fn(),
+					setState: jest.fn()
+				} as unknown as Prehooks<TestState>;
+				ctx.prehooks = prehooks;
+				expect( ctx.prehooks ).toBe( prehooks );
+				ctx.prehooks = undefined as unknown as Prehooks<TestState>;
 			} );
 		} );
 	} );

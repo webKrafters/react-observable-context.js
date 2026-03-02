@@ -104,15 +104,15 @@ export function createPureClient(
 		prehooks? : Prehooks<Partial<TestState>>,
 		type : string
 	}>= ({ prehooks = undefined, type }) => {
-
-		const { setState } = useStream();
 		
 		useEffect(() => { ObservableContext.prehooks = prehooks! }, [ prehooks ]);
 		
-		useEffect(() => setState({ type }), [ type ]);
+		useEffect(() => ObservableContext.store.setState({ type }), [ type ]);
 		
 		const overridePricing = useCallback( e => {
-			setState({ price: Number( e.target.value ) })
+			ObservableContext.store.setState({
+				price: Number( e.target.value )
+			})
 		}, [] );
 		return (
 			<div>
