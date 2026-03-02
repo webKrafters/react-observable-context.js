@@ -104,15 +104,15 @@ export function createPureClient(
 		prehooks? : Prehooks<Partial<TestState>>,
 		type : string
 	}>= ({ prehooks = undefined, type }) => {
+
+		const { setState } = useStream();
 		
 		useEffect(() => { ObservableContext.prehooks = prehooks! }, [ prehooks ]);
 		
-		useEffect(() => ObservableContext.store.setState({ type }), [ type ]);
+		useEffect(() => setState({ type }), [ type ]);
 		
 		const overridePricing = useCallback( e => {
-			ObservableContext.store.setState({
-				price: Number( e.target.value )
-			})
+			setState({ price: Number( e.target.value ) })
 		}, [] );
 		return (
 			<div>
@@ -135,6 +135,8 @@ export function createPureClient(
 		);
 	};
 	Product.displayName = 'Product';
+
+	const MemoizedProduct = memo( Product );
 
 	const App : FC = () => {
 
@@ -163,6 +165,6 @@ export function createPureClient(
 		ProductDescription: MemoizedProductDescription,
 		PriceSticker: MemoizedPriceSticker,
 		TallyDisplay: MemoizedTallyDisplay,
-		Product
+		Product: MemoizedProduct
 	};
 }

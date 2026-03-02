@@ -4,7 +4,7 @@ import type {
 	ReactNode
 } from 'react';
 
-import type { Prehooks } from '../..';
+import type { Prehooks, Store } from '../..';
 
 import { TestState } from './normal';
 
@@ -40,12 +40,14 @@ export function createConnectedClient(
 	ObservableContext : ObservableContextType<Partial<TestState>>
 ) {
 
-	const Reset : FC = () => {
+	const Reset : FC<Store<Partial<TestState>>> = ({ resetState }) => {
 		useEffect(() => console.log( 'Reset component rendered.....' ));
-		const reset = useCallback(() => ObservableContext.store.resetState(), []);
+		const reset = useCallback(() => resetState(), []);
 		return ( <button onClick={ reset }>reset context</button> );
 	};
 	Reset.displayName = 'Reset';
+
+	const ConnectedReset = ObservableContext.connect()( Reset ); 
 
 	const CustomerPhoneDisplay : FC<{ data: { phone: string } }> = ({ data }) => {
 		useEffect(() => console.log( 'CustomerPhoneDisplay component rendered.....' ));
@@ -94,7 +96,7 @@ export function createConnectedClient(
 					</tbody>
 				</table>
 				<div style={{ textAlign: 'right' }}>
-					<Reset />
+					<ConnectedReset />
 				</div>
 			</div>
 		);
@@ -108,7 +110,7 @@ export function createConnectedClient(
 		type: 'type'
 	})( TallyDisplay );
 
-	const Editor : FC = () => {
+	const Editor : FC<Store<Partial<TestState>>> = ({ setState }) => {
 
 		const fNameInputRef = useRef<HTMLInputElement>( null );
 		const lNameInputRef = useRef<HTMLInputElement>( null );
@@ -117,36 +119,28 @@ export function createConnectedClient(
 		const colorInputRef = useRef<HTMLInputElement>( null );
 		const typeInputRef = useRef<HTMLInputElement>( null );
 
-		const updateColor = useCallback(() => {
-			ObservableContext.store.setState({
+		const updateColor = useCallback(() => setState({
 			color: colorInputRef.current?.value
-			});
-		}, []);
-		const updateName = useCallback(() => {
-			ObservableContext.store.setState({
-				customer: {
-					name: {
-						first: fNameInputRef.current?.value,
-						last: lNameInputRef.current?.value
-					}
+		}), []);
+		const updateName = useCallback(() => setState({
+			customer: {
+				name: {
+					first: fNameInputRef.current?.value,
+					last: lNameInputRef.current?.value
 				}
-			});
-		}, []);
+			}
+		}), []);
 		const updatePhone = useCallback(() => {
 			const phone = phoneInputRef.current!.value;
 			if( phone?.length && !/[0-9]{10}/.test( phone ) ) { return }
-			ObservableContext.store.setState({ customer: { phone } });
+			setState({ customer: { phone } });
 		}, []);
-		const updatePrice = useCallback(() => {
-			ObservableContext.store.setState({
-				price: Number( priceInputRef.current?.value )
-			});
-		}, []);
-		const updateType = useCallback(() => {
-			ObservableContext.store.setState({
-				type: typeInputRef.current?.value
-			});
-		}, []);
+		const updatePrice = useCallback(() => setState({
+			price: Number( priceInputRef.current?.value )
+		}), []);
+		const updateType = useCallback(() => setState({
+			type: typeInputRef.current?.value
+		}), []);
 
 		useEffect(() => console.log( 'Editor component rendered.....' ));
 
@@ -192,6 +186,8 @@ export function createConnectedClient(
 	};
 	Editor.displayName = 'Editor';
 
+	const ConnectedEditor = ObservableContext.connect()( Editor );
+
 	const ProductDescription : FC<{
 		data : {
 			c: ReactNode,
@@ -224,20 +220,18 @@ export function createConnectedClient(
 
 	const ConnectedPriceSticker = ObservableContext.connect({ p: 'price' })( PriceSticker );
 
-	const Product : React.FC<{
+	const Product : React.FC<Store<Partial<TestState>> & {
 		prehooks? : Prehooks<Partial<TestState>>,
 		type? : string
-	}> = ({ prehooks = undefined, type }) => {
+	}> = ({ prehooks = undefined, setState, type }) => {
 
 		useEffect(() => { ObservableContext.prehooks = prehooks! }, [ prehooks ]);
 			
-		useEffect(() => { ObservableContext.store.setState({ type }) }, [ type ]);
+		useEffect(() => setState({ type }), [ type ]);
 
-		const overridePricing = useCallback( e => {
-			ObservableContext.store.setState({
+		const overridePricing = useCallback( e => setState({
 				price: Number( e.target.value )
-			});
-		}, [] );
+		}), [] );
 
 		return (
 			<div>
@@ -250,7 +244,7 @@ export function createConnectedClient(
 						marginBottom: 10,
 						paddingBottom: 5
 					}}>
-						<Editor />
+						<ConnectedEditor />
 						<ConnectedTallyDisplay />
 					</div>
 					<ConnectedProductDescription />
@@ -260,6 +254,8 @@ export function createConnectedClient(
 		);
 	};
 	Product.displayName = 'Product';
+
+	const ConnectedProduct = ObservableContext.connect()( Product );
 
 	const App : React.FC = () => {
 
@@ -274,7 +270,7 @@ export function createConnectedClient(
 				<div style={{ marginBottom: 10 }}>
 					<label>Type: <input onKeyUp={ updateType } placeholder="override product type here..." /></label>
 				</div>
-				<Product type={ productType } />
+				<ConnectedProduct type={ productType } />
 			</div>
 		);
 	};
@@ -284,11 +280,11 @@ export function createConnectedClient(
 		App,
 		CapitalizedDisplay: CapitalizedText,
 		CustomerPhoneDisplay: ConnectedCustomerPhoneDisplay,
-		Editor,
-		Reset,
+		Editor: ConnectedEditor,
+		Reset: ConnectedReset,
 		TallyDisplay: ConnectedTallyDisplay,
 		PriceSticker: ConnectedPriceSticker,
-		Product,
+		Product: ConnectedProduct,
 		ProductDescription: ConnectedProductDescription
 	};
 }

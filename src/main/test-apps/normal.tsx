@@ -129,42 +129,37 @@ export function createNormalClient(
 	TallyDisplay.displayName = 'TallyDisplay';
 
 	const Editor : React.FC = () => {
+
+		const { setState } = useStream();
+
 		const fNameInputRef = useRef<HTMLInputElement>( null );
 		const lNameInputRef = useRef<HTMLInputElement>( null );
 		const phoneInputRef = useRef<HTMLInputElement>( null );
 		const priceInputRef = useRef<HTMLInputElement>( null );
 		const colorInputRef = useRef<HTMLInputElement>( null );
 		const typeInputRef = useRef<HTMLInputElement>( null );
-		const updateColor = useCallback(() => {
-			ObservableContext.store.setState({
-				color: colorInputRef.current!.value
-			});
-		}, []);
-		const updateName = useCallback(() => {
-			ObservableContext.store.setState({
-				customer: {
-					name: {
-						first: fNameInputRef.current!.value,
-						last: lNameInputRef.current!.value
-					}
+		const updateColor = useCallback(() => setState({
+			color: colorInputRef.current!.value
+		}), []);
+		const updateName = useCallback(() => setState({
+			customer: {
+				name: {
+					first: fNameInputRef.current!.value,
+					last: lNameInputRef.current!.value
 				}
-			});
-		}, []);
+			}
+		}), []);
 		const updatePhone = useCallback(() => {
 			const phone = phoneInputRef.current!.value;
 			if( phone.length && !/[0-9]{10}/.test( phone ) ) { return }
-			ObservableContext.store.setState({ customer: { phone } });
+			setState({ customer: { phone } });
 		}, []);
-		const updatePrice = useCallback(() => {
-			ObservableContext.store.setState({
-				price: Number( priceInputRef.current!.value )
-			} );
-		}, []);
-		const updateType = useCallback(() => {
-			ObservableContext.store.setState({
-				type: typeInputRef.current!.value
-			});
-		}, []);
+		const updatePrice = useCallback(() => setState({
+			price: Number( priceInputRef.current!.value )
+		} ), []);
+		const updateType = useCallback(() => setState({
+			type: typeInputRef.current!.value
+		}), []);
 		useEffect(() => console.log( 'Editor component rendered.....' ));
 		return (
 			<fieldset style={{ margin: '10px 0' }}>
@@ -237,17 +232,12 @@ export function createNormalClient(
 	const Product : React.FC<{
 		prehooks?: Prehooks, type : string
 	}> = ({ prehooks = undefined, type }) => {
-		useEffect(() => {
-			ObservableContext.prehooks = prehooks!;
-		}, [ prehooks ]);
-		useEffect(() => {
-			ObservableContext.store.setState({ type });
-		}, [ type ]);
-		const overridePricing = useCallback(
-			e => ObservableContext.store.setState({
-				price: Number( e.target.value )
-			}), []
-		);
+		const { setState } = useStream();
+		useEffect(() => { ObservableContext.prehooks = prehooks! }, [ prehooks ]);
+		useEffect(() => setState({ type }), [ type ]);
+		const overridePricing = useCallback( e => setState({
+			price: Number( e.target.value )
+		}), []);
 		return (
 			<div>
 				<div style={{ marginBottom: 10 }}>

@@ -92,7 +92,9 @@ describe( 'ReactObservableContext', () => {
 					AppWithConnectedChildren = client.App;
 				});
 				afterAll(() => { ObservableContext.dispose() });
-			test( 'scenario 1', async () => {
+				// @debug
+				test( '1xxxx', async () => {
+				// test( 'scenario 1', async () => {
 					const { renderCount } : PerfValue = perf( React );
 					render( <AppWithConnectedChildren /> );
 					let baseRenderCount : Record<string,any>;
@@ -100,13 +102,17 @@ describe( 'ReactObservableContext', () => {
 					fireEvent.change( screen.getByLabelText( 'New Price:' ), { target: { value: '123' } } );
 					fireEvent.click( screen.getByRole( 'button', { name: 'update price' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 0 ); // unaffected: no use for price data
-						expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for price data
-						expect( netCount.PriceSticker ).toBe( 1 );
-						expect( netCount.ProductDescription ).toBe( 0 ); // unaffected: no use for price data
-						expect( netCount.Reset ).toBe( 0 ); // unaffected: no use for price data
-						expect( netCount.TallyDisplay ).toBe( 1 );
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							App: 0,
+							Product: 0,
+							Editor: 0,
+							TallyDisplay: 1,
+							CustomerPhoneDisplay: 0,
+							CapitalizedDisplay: 0,
+							Reset: 1,
+							ProductDescription: 0,
+							PriceSticker: 1
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -136,13 +142,17 @@ describe( 'ReactObservableContext', () => {
 					fireEvent.change( screen.getByLabelText( 'New Type:' ), { target: { value: 'Bag' } } );
 					fireEvent.click( screen.getByRole( 'button', { name: 'update type' } ) );
 					await wait(() => {
-						const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-						expect( netCount.CustomerPhoneDisplay ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.PriceSticker ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.ProductDescription ).toBe( 1 );
-						expect( netCount.Reset ).toBe( 0 ); // unaffected: no use for product type data
-						expect( netCount.TallyDisplay ).toBe( 1 );
+						expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+							App: 0,
+							Product: 0,
+							Editor: 0,
+							TallyDisplay: 1,
+							CustomerPhoneDisplay: 0,
+							CapitalizedDisplay: 0,
+							Reset: 1,
+							ProductDescription: 1,
+							PriceSticker: 0
+						});
 					});
 					cleanupPerfTest();
 				} );
@@ -437,22 +447,24 @@ describe( 'ReactObservableContext', () => {
 				AppNormal = client.App;
 			});
 			afterAll(() => { ObservableContext.dispose() });
-			// @debug
-			test( '1xxxx', async () => {
-			// test( 'only re-renders Provider children affected by the Provider parent prop change', async () => {
+			test( 'only re-renders Provider children affected by the Provider parent prop change', async () => {
 				const { renderCount } : PerfValue = perf( React );
 				render( <AppNormal /> );
 				let baseRenderCount : Record<string,any>;
 				await wait(() => { baseRenderCount = transformRenderCount( renderCount ); });
 				fireEvent.keyUp( screen.getByLabelText( 'Type:' ), { target: { value: 'A' } } );
 				await wait(() => {
-					const netCount = transformRenderCount( renderCount, baseRenderCount ) as any;
-					expect( netCount.CustomerPhoneDisplay ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-					expect( netCount.Editor ).toBe( 0 ); // unaffected: no use for product type data
-					expect( netCount.PriceSticker ).toBe( 0 ); // unaffected: no use for product type data
-					expect( netCount.ProductDescription ).toBe( 1 );
-					expect( netCount.Reset ).toBe( 1 ); // UPDATED BY REACT PROPAGATION (b/c no memoization)
-					expect( netCount.TallyDisplay ).toBe( 1 );
+					expect( transformRenderCount( renderCount, baseRenderCount ) ).toEqual({
+						App: 1,
+						Product: 1,
+						Editor: 1,
+						TallyDisplay: 2,
+						CustomerPhoneDisplay: 2,
+						CapitalizedDisplay: 0,
+						Reset: 2,
+						ProductDescription: 2,
+						PriceSticker: 1
+					});
 				});
 				cleanupPerfTest();
 			} );
