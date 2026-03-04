@@ -114,7 +114,7 @@ const unsubscribeFn = store.subscribe( eventType, listener );
 ```
 Any actions taken here is applied to all components streaming affected state slices.\
 Caveat 1: Parameterless <code>context.store.getState</code> returns the whole state.\
-Caveat 2: Parameterless <code>context.store.resetState</code> which is a no-op.
+Caveat 2: Parameterless <code>context.store.resetState</code> is a no-op.
 
 ### Joining the context stream.
 A context stream allows a client to set up a dedicated channel through which it receives automatic updates whenever its selected slices of state change. It can also update the context through this channel.
