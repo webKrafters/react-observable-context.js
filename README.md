@@ -32,10 +32,10 @@
 
 <ul>
 	<li> Ready for use anywhere in the app. No Provider components needed.</li>
-	<li> Auto-immutable update-friendly context. See <a href="https://eagleeye.js.org/concepts/store/setstate"><code>store.setState</code> (under revision)</a>.</li>
-	<li> A context bearing an observable consumer <a href="https://eagleeye.js.org/concepts/store">store (under revision)</a>.</li>
-	<li> Recognizes <b>negative array indexing</b>. Please see <a href="https://eagleeye.js.org/concepts/property-path">Property Path (under revision)</a> and <code>store.setState</code> <a href="https://eagleeye.js.org/concepts/store/setstate#indexing">Indexing (under revision)</a>.</li>
-	<li> Only re-renders subscribing components (<a href="https://eagleeye.js.org/concepts/client">clients (under revision)</a>) on context state changes.</li>
+	<li> Auto-immutable update-friendly context. See <a href="https://eagleeye.js.org/concepts/store/setstate"><code>store.setState</code> (docs under revision)</a>.</li>
+	<li> A context bearing an observable consumer <a href="https://eagleeye.js.org/concepts/store">store (docs under revision)</a>.</li>
+	<li> Recognizes <b>negative array indexing</b>. Please see <a href="https://eagleeye.js.org/concepts/property-path">Property Path (docs under revision)</a> and <code>store.setState</code> <a href="https://eagleeye.js.org/concepts/store/setstate#indexing">Indexing (docs under revision)</a>.</li>
+	<li> Only re-renders subscribing components (<a href="https://eagleeye.js.org/concepts/client">clients (docs under revision)</a>) on context state changes.</li>
 	<li> Subscribing component decides which context state properties' changes to trigger its update.</li>
 </ul>
 
@@ -43,9 +43,9 @@
 
 **Moniker:** Legacy Eagle Eye
 
-**Usage:** Please see <b><a href="https://eagleeye.js.org/getting-started">Getting Started (under revision)</a></b>.
+**Usage:** Please see <b><a href="https://eagleeye.js.org/getting-started">Getting Started (docs under revision)</a></b>.
 
-**Demo:** [Play with the app on codesandbox (under revision)](https://codesandbox.io/s/github/webKrafters/react-observable-context-app)\
+**Demo:** [Play with the app on codesandbox (docs under revision)](https://codesandbox.io/s/github/webKrafters/react-observable-context-app)\
 If sandbox fails to load app, please refresh dependencies on its lower left.
 
 **Install:**\
@@ -165,7 +165,7 @@ const storage = context.storage;
 context.storage = IStorage<T>?;
 ```
 
-May also see <b><a href="https://eagleeye.js.org/history/features">What's Changed? (currently uunder revision)</a></b>
+May also see <b><a href="https://eagleeye.js.org/history/features">What's Changed? (docs currently under revision)</a></b>
 
 ## Please see full documentation here:
 **[eagleeye.js.org](https://eagleeye.js.org)** (currently out-of-date pending revision)
