@@ -5,19 +5,19 @@
 	<a href="https://typescriptlang.org">
 		<img alt="TypeScript" src="https://badgen.net/badge/icon/typescript?icon=typescript&label">
 	</a>
-	<a href="https://github.com/webKrafters/react-observable-context/actions">
-		<img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/webKrafters/react-observable-context/test.yml">
+	<a href="https://github.com/webKrafters/react-observable-context.js/actions">
+		<img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/webKrafters/react-observable-context.js/test.yml">
 	</a>
-	<a href="https://coveralls.io/github/webKrafters/react-observable-context">
-		<img alt="coverage" src="https://img.shields.io/coverallsCoverage/github/webKrafters/react-observable-context.svg">
+	<a href="https://coveralls.io/github/webKrafters/react-observable-context.js">
+		<img alt="coverage" src="https://img.shields.io/coverallsCoverage/github/webKrafters/react-observable-context.js.svg">
 	</a>
-	<img alt="NPM" src="https://img.shields.io/npm/l/@webkrafters/react-observable-context">
+	<img alt="NPM" src="https://img.shields.io/npm/l/@webkrafters/react-observable-context.js">
 	<img alt="Maintenance" src="https://img.shields.io/maintenance/yes/2032">
-	<img alt="build size" src="https://img.shields.io/bundlephobia/minzip/@webkrafters/react-observable-context?label=bundle%20size">
-	<a href="https://www.npmjs.com/package/@webKrafters/react-observable-context">
-		<img alt="Downloads" src="https://img.shields.io/npm/dt/@webkrafters/react-observable-context.svg">
+	<img alt="build size" src="https://img.shields.io/bundlephobia/minzip/@webkrafters/react-observable-context.js?label=bundle%20size">
+	<a href="https://www.npmjs.com/package/@webKrafters/react-observable-context.js">
+		<img alt="Downloads" src="https://img.shields.io/npm/dt/@webkrafters/react-observable-context.js.svg">
 	</a>
-	<img alt="GitHub package.json version" src="https://img.shields.io/github/package-json/v/webKrafters/react-observable-context">
+	<img alt="GitHub package.json version" src="https://img.shields.io/github/package-json/v/webKrafters/react-observable-context.js">
 </p>
 
 # React-Observable-Context [Eagle Eye]
@@ -32,10 +32,10 @@
 
 <ul>
 	<li> Ready for use anywhere in the app. No Provider components needed.</li>
-	<li> Auto-immutable update-friendly context. See <a href="https://eagleeye.js.org/concepts/store/setstate"><code>store.setState</code> (docs under revision)</a>.</li>
-	<li> A context bearing an observable consumer <a href="https://eagleeye.js.org/concepts/store">store (docs under revision)</a>.</li>
-	<li> Recognizes <b>negative array indexing</b>. Please see <a href="https://eagleeye.js.org/concepts/property-path">Property Path (docs under revision)</a> and <code>store.setState</code> <a href="https://eagleeye.js.org/concepts/store/setstate#indexing">Indexing (docs under revision)</a>.</li>
-	<li> Only re-renders subscribing components (<a href="https://eagleeye.js.org/concepts/client">clients (docs under revision)</a>) on context state changes.</li>
+	<li> Auto-immutable update-friendly context. See <a href="https://react-observable-context.js.org/concepts/store/setstate"><code>store.setState</code> (docs under revision)</a>.</li>
+	<li> A context bearing an observable consumer <a href="https://react-observable-context.js.org/concepts/store">store (docs under revision)</a>.</li>
+	<li> Recognizes <b>negative array indexing</b>. Please see <a href="https://react-observable-context.js.org/concepts/property-path">Property Path (docs under revision)</a> and <code>store.setState</code> <a href="https://react-observable-context.js.org/concepts/store/setstate#indexing">Indexing (docs under revision)</a>.</li>
+	<li> Only re-renders subscribing components (<a href="https://react-observable-context.js.org/concepts/client">clients (docs under revision)</a>) on context state changes.</li>
 	<li> Subscribing component decides which context state properties' changes to trigger its update.</li>
 </ul>
 
@@ -43,7 +43,7 @@
 
 **Moniker:** Legacy Eagle Eye
 
-**Usage:** Please see <b><a href="https://eagleeye.js.org/getting-started">Getting Started (docs under revision)</a></b>.
+**Usage:** Please see <b><a href="https://react-observable-context.js.org/getting-started">Getting Started (docs under revision)</a></b>.
 
 **Demo:** [Play with the app on codesandbox](https://codesandbox.io/s/github/webKrafters/react-observable-context-app)\
 If sandbox fails to load app, please refresh dependencies on its lower left.
@@ -103,13 +103,13 @@ Deactivates this context by:
 ### Accessing external store reference.
 ```tsx
 const store = context.store;
-// https://eagleeye.js.org/concepts/store/resetstate/
+// https://react-observable-context.js.org/concepts/store/resetstate/
 store.resetState( Array<string>? );
-// https://eagleeye.js.org/concepts/store/setstate/
+// https://react-observable-context.js.org/concepts/store/setstate/
 store.setState( Changes<T> );
-// https://eagleeye.js.org/concepts/store/getstate/
+// https://react-observable-context.js.org/concepts/store/getstate/
 const state = store.getState( Array<string> );
-// https://eagleeye.js.org/concepts/store/subscribe/
+// https://react-observable-context.js.org/concepts/store/subscribe/
 const unsubscribeFn = store.subscribe( eventType, listener );
 ```
 Any actions taken here is applied to all components streaming affected state slices.\
@@ -121,14 +121,14 @@ A context stream allows a client to set up a dedicated channel through which it 
 ```tsx
 const useStream = context.stream;
 // joining the stream twice
-// for more on selectorMap - https://eagleeye.js.org/concepts/selector-map/
+// for more on selectorMap - https://react-observable-context.js.org/concepts/selector-map/
 const store1 = useStream(SelectorMap?);
 const store2 = useStream(SelectorMap?);
 // access the current data value monitored by this store
 console.log( 'data', store1.data );
-// https://eagleeye.js.org/concepts/store/resetstate/
+// https://react-observable-context.js.org/concepts/store/resetstate/
 store1.resetState( Array<string>? ); // changes are context-wide
-// https://eagleeye.js.org/concepts/store/setstate/
+// https://react-observable-context.js.org/concepts/store/setstate/
 store1.setState( Changes<T> ); // changes are context-wide
 ```
 Any actions taken here is applied to all components streaming affected state slices.\
@@ -165,10 +165,10 @@ const storage = context.storage;
 context.storage = IStorage<T>?;
 ```
 
-May also see <b><a href="https://eagleeye.js.org/history/features">What's Changed? (docs currently under revision)</a></b>
+May also see <b><a href="https://react-observable-context.js.org/history/features">What's Changed? (docs currently under revision)</a></b>
 
 ## Please see full documentation here:
-**[eagleeye.js.org](https://eagleeye.js.org)** (currently out-of-date pending revision)
+**[eagleeye.js.org](https://react-observable-context.js.org)** (currently out-of-date pending revision)
 
 # License
 
