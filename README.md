@@ -32,10 +32,10 @@
 
 <ul>
 	<li> Ready for use anywhere in the app. No Provider components needed.</li>
-	<li> Auto-immutable update-friendly context. See <a href="https://react-observable-context.js.org/concepts/store/setstate"><code>store.setState</code> (docs under revision)</a>.</li>
-	<li> A context bearing an observable consumer <a href="https://react-observable-context.js.org/concepts/store">store (docs under revision)</a>.</li>
-	<li> Recognizes <b>negative array indexing</b>. Please see <a href="https://react-observable-context.js.org/concepts/property-path">Property Path (docs under revision)</a> and <code>store.setState</code> <a href="https://react-observable-context.js.org/concepts/store/setstate#indexing">Indexing (docs under revision)</a>.</li>
-	<li> Only re-renders subscribing components (<a href="https://react-observable-context.js.org/concepts/client">clients (docs under revision)</a>) on context state changes.</li>
+	<li> Auto-immutable update-friendly context. See <a href="https://react-observable-context.js.org/concepts/store/setstate"><code>store.setState</code></a>.</li>
+	<li> A context bearing an observable consumer <a href="https://react-observable-context.js.org/concepts/store">store</a>.</li>
+	<li> Recognizes <b>negative array indexing</b>. Please see <a href="https://react-observable-context.js.org/concepts/property-path">Property Path</a> and <code>store.setState</code> <a href="https://react-observable-context.js.org/concepts/store/setstate#indexing">Indexing</a>.</li>
+	<li> Only re-renders subscribing components (<a href="https://react-observable-context.js.org/concepts/client">clients</a>) on context state changes.</li>
 	<li> Subscribing component decides which context state properties' changes to trigger its update.</li>
 </ul>
 
@@ -43,7 +43,7 @@
 
 **Moniker:** Legacy Eagle Eye
 
-**Usage:** Please see <b><a href="https://react-observable-context.js.org/getting-started">Getting Started (docs under revision)</a></b>.
+**Usage:** Please see <b><a href="https://react-observable-context.js.org/getting-started">Getting Started</a></b>.
 
 **Demo:** [Play with the app on codesandbox](https://codesandbox.io/s/github/webKrafters/react-observable-context-app)\
 If sandbox fails to load app, please refresh dependencies on its lower left.
@@ -165,10 +165,10 @@ const storage = context.storage;
 context.storage = IStorage<T>?;
 ```
 
-May also see <b><a href="https://react-observable-context.js.org/history/features">What's Changed? (docs currently under revision)</a></b>
+May also see <b><a href="https://react-observable-context.js.org/history/features">What's Changed?</a></b>
 
 ## Please see full documentation here:
-**[eagleeye.js.org](https://react-observable-context.js.org)** (currently out-of-date pending revision)
+**[eagleeye.js.org](https://react-observable-context.js.org)**
 
 # License
 
