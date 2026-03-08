@@ -1,8 +1,8 @@
 {
-  "alias": "react eagle eye context",
+  "alias": "react observable context",
   "author": "Stephen Isienyi <stephen.isienyi@webkrafting.com>",
   "bugs": {
-    "url": "https://github.com/webKrafters/react-observable-context/issues"
+    "url": "https://github.com/webKrafters/react-observable-context.js/issues"
   },
   "contributors": [
     "steveswork <stephen.isienyi@gmail.com> (https://github.com/steveswork)"
@@ -63,7 +63,7 @@
     "logo.png",
     "dist"
   ],
-  "homepage": "https://eagleeye.js.org",
+  "homepage": "https://react-observable-context.js.org",
   "keywords": [
     "connect",
     "context",
@@ -103,7 +103,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/webKrafters/react-observable-context.git"
+    "url": "git+https://github.com/webKrafters/react-observable-context.js.git"
   },
   "scripts": {
     "build": "eslint --fix && rm -rf dist && tsc && babel dist -d dist",
