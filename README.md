@@ -103,13 +103,13 @@ Deactivates this context by:
 ### Accessing external store reference.
 ```tsx
 const store = context.store;
-// https://react-observable-context.js.org/concepts/store/resetstate/
+// https://react-observable-context.js.org/external-access#external-apis
 store.resetState( Array<string>? );
-// https://react-observable-context.js.org/concepts/store/setstate/
+// https://react-observable-context.js.org/external-access#external-apis
 store.setState( Changes<T> );
-// https://react-observable-context.js.org/concepts/store/getstate/
+// https://react-observable-context.js.org/external-access#external-apis
 const state = store.getState( Array<string> );
-// https://react-observable-context.js.org/concepts/store/subscribe/
+// https://react-observable-context.js.org/external-access#external-apis
 const unsubscribeFn = store.subscribe( eventType, listener );
 ```
 Any actions taken here is applied to all components streaming affected state slices.\
@@ -167,8 +167,7 @@ context.storage = IStorage<T>?;
 
 May also see <b><a href="https://react-observable-context.js.org/history/features">What's Changed?</a></b>
 
-## Please see full documentation here:
-**[eagleeye.js.org](https://react-observable-context.js.org)**
+**[react-observable-context.js.org](https://react-observable-context.js.org)**
 
 # License
 
