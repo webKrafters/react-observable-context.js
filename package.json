@@ -82,7 +82,7 @@
     "state manager",
     "useContext"
   ],
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "main": "dist/index.js",
   "name": "@webkrafters/react-observable-context",
   "peerDependencies": {
