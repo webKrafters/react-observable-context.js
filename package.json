@@ -25,7 +25,6 @@
     "@types/lodash.isplainobject": "^4.0.9",
     "@types/node": "^20.11.28",
     "@webkrafters/clone-total": "^1.0.1",
-    "@webkrafters/data-distillery": "^0.1.1",
     "@webkrafters/get-property": "^2.0.0",
     "@webkrafters/path-dotize": "0.0.2",
     "@webkrafters/timed-map": "^2.0.0",
@@ -50,7 +49,6 @@
     "lodash.isobject": "^3.0.2",
     "lodash.isplainobject": "^4.0.6",
     "lodash.omit": "^4.5.0",
-    "lodash.set": "^4.3.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-performance-testing": "^2.0.0",
@@ -88,14 +86,18 @@
   "peerDependencies": {
     "@types/react": ">= 16.8.0 <19",
     "@webkrafters/clone-total": ">= 1.0.1",
-    "@webkrafters/data-distillery": ">= 0.0.3",
+    "@webkrafters/get-property": ">= 1.0.1",
     "@webkrafters/path-dotize": ">= 0.0.2",
+    "@webkrafters/timed-map": "^2.0.0",
+    "lodash.clonedeep": ">= 0.1.0",
+    "lodash.clonedeepwith": ">= 0.1.0",
     "lodash.isboolean": ">= 0.1.0",
     "lodash.isempty": ">= 0.1.0",
+    "lodash.isinteger": ">= 0.1.0",
+    "lodash.isobject": ">= 0.1.0",
     "lodash.isequal": ">= 0.1.0",
     "lodash.isplainobject": ">= 0.8.0",
     "lodash.omit": ">= 0.1.0",
-    "lodash.set": ">= 0.1.0",
     "react": ">= 16.8.0 <19"
   },
   "publishConfig": {
@@ -115,6 +117,6 @@
   "types": "dist/index.d.ts",
   "version": "7.0.2",
   "dependencies": {
-    "@webkrafters/eagleeye": "^1.0.1"
+    "@webkrafters/eagleeye": "^1.0.4"
   }
 }
