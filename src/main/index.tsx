@@ -134,7 +134,7 @@ export class ObservableContext<T extends State> {
 	 *
 	 * @param context - Refers to the PublicObservableContext<T> type of the ObservableContext<T>
 	 * @param [selectorMap] - Key:value pairs where `key` => arbitrary key given to a Store.data property holding a state slice and `value` => property path to a state slice used by this component: see examples below. May add a mapping for a certain arbitrary key='state' and value='@@STATE' to indicate a desire to obtain the entire state object and assign to a `state` property of Store.data. A change in any of the referenced properties results in this component render. When using '@@STATE', note that any change within the state object will result in this component render.
-	 * @see {useContext} for selectorMap sample
+	 * @see {useStream} for selectorMap sample
 	 */
 	private _connect = <S extends SelectorMap>( selectorMap? : S ) => {
 		const ctx = this;

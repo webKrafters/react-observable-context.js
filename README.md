@@ -25,18 +25,20 @@
 <table BORDER-COLOR="0a0" BORDER-WIDTH="2">
     <td VALIGN="middle" ALIGN="center" FONT-WEIGHT="BOLD" COLOR="#333" HEIGHT="250px" width="1250px">
 		COMPATIBLE WITH REACT VERSIONS 16.8 to 18.x.x.<br />
-		A NEW EAGLEEYE BASED PRODUCT WILL BE DEVELOPED SPECIFICALLY FOR REACT 19+<br /><br />
-		PLEASE STAY TUNED.
+		FOR REACT 19.2.0 AND ABOVE, PLEASE USE THE <br />
+		<a href="https://www.npmjs.com/package/@webkrafters/react-eagleeye">React Eagle Eye</a>
 	</td>
 </table>
 
 <ul>
 	<li> Ready for use anywhere in the app. No Provider components needed.</li>
+	<li> Automatically prevents unnecessary cascading re-renders when used with the <a href="https://react-observable-context.js.org/getting-started/#connect-usage"><code>connect</code></a> Stream API.</li>
 	<li> Auto-immutable update-friendly context. See <a href="https://react-observable-context.js.org/concepts/store/setstate"><code>store.setState</code></a>.</li>
 	<li> A context bearing an observable consumer <a href="https://react-observable-context.js.org/concepts/store">store</a>.</li>
 	<li> Recognizes <b>negative array indexing</b>. Please see <a href="https://react-observable-context.js.org/concepts/property-path">Property Path</a> and <code>store.setState</code> <a href="https://react-observable-context.js.org/concepts/store/setstate#indexing">Indexing</a>.</li>
 	<li> Only re-renders subscribing components (<a href="https://react-observable-context.js.org/concepts/client">clients</a>) on context state changes.</li>
 	<li> Subscribing component decides which context state properties' changes to trigger its update.</li>
+	<li>OOB Support for framework-agnostic state sharing among applications. Simply create an <a href="https://auto-immutable.js.org/intro/">Auto Immutable</a> instance to pass around as the <code>value</code> argument for this or any <a href="https://eagleeye.js.org">Eagle Eye</a> based state manager instances.</li>
 </ul>
 
 **Name:** React-Observable-Context
@@ -49,7 +51,7 @@
 If sandbox fails to load app, please refresh dependencies on its lower left.
 
 **Install:**\
-npm install --save @webkrafters/react-observable-context]
+npm install --save @webkrafters/react-observable-context
 
 May also see <b><a href="https://react-observable-context.js.org/history/features">What's Changed?</a></b>
 
