@@ -92,4 +92,7 @@ export interface IProps { ref?: unknown }
 
 export type OwnProps = IProps & Record<any, any>;
 
-export { createContext as createEagleEye } from './main';
+export {
+	createContext as createEagleEye,
+	type ObservableContext as EagleEyeContext
+} from './main';
