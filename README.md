@@ -47,8 +47,22 @@
 
 **Usage:** Please see <b><a href="https://react-observable-context.js.org/getting-started">Getting Started</a></b>.
 
-**Demo:** [Play with the app on codesandbox](https://codesandbox.io/s/github/webKrafters/react-observable-context-app)\
-If sandbox fails to load app, please refresh dependencies on its lower left.
+**Demo:**\
+[1] [Play with the app on codesandbox](https://codesandbox.io/s/github/webKrafters/react-observable-context-app)\
+[2] [Play with the app on codesandbox (Universal Rendering)](https://codesandbox.io/s/github/webKrafters/roc-universal-app)\
+If sandbox fails to load app, please refresh dependencies on its lower left.\
+**OR**\
+Bring in and run the demo software locally through the following steps:\
+**Step 1:** Run either\
+&nbsp;&nbsp;&nbsp;&nbsp;`git clone https://github.com/webKrafters/react-observable-context-app.git`\
+&nbsp;&nbsp;&nbsp;&nbsp;or\
+&nbsp;&nbsp;&nbsp;&nbsp;`git clone https://github.com/webKrafters/roc-universal-app.git` (Universal Rendering)\
+**Step 2:** CD into the cloned directory\
+**Step 3:** Run `npm i`\
+**Step 4:** Run `npm run dev`\
+**Step 5:** Copy and paste the displayed URL into the web browser.\
+**Step 6:** Use CTRL+F5 (Mac: CMD+F5) at the browser to ensure a fresh page load if needed.\
+**Step 7:** Pay with the app.
 
 **Install:**\
 npm install --save @webkrafters/react-observable-context
