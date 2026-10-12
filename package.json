@@ -93,9 +93,9 @@
     "lodash.clonedeepwith": ">= 0.1.0",
     "lodash.isboolean": ">= 0.1.0",
     "lodash.isempty": ">= 0.1.0",
+    "lodash.isequal": ">= 0.1.0",
     "lodash.isinteger": ">= 0.1.0",
     "lodash.isobject": ">= 0.1.0",
-    "lodash.isequal": ">= 0.1.0",
     "lodash.isplainobject": ">= 0.8.0",
     "lodash.omit": ">= 0.1.0",
     "react": ">= 16.8.0 <19"
@@ -109,14 +109,15 @@
   },
   "scripts": {
     "build": "eslint --fix && rm -rf dist && tsc && babel dist -d dist",
+    "pack": "npm run build && npm pack",
     "test": "eslint --fix && jest --coverage --updateSnapshot",
     "test:clean": "jest --clearCache",
     "test:core": "jest --updateSnapshot",
     "test:watch": "eslint --fix && jest --updateSnapshot --watchAll"
   },
   "types": "dist/index.d.ts",
-  "version": "7.0.8",
+  "version": "7.0.9",
   "dependencies": {
-    "@webkrafters/eagleeye": "^1.0.8"
+    "@webkrafters/eagleeye": "^1.0.11"
   }
 }

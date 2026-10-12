@@ -8,3 +8,4 @@ node_modules
 npm-debug.log*
 report.*.json
 docs-dev-copy
+*.tgz
